@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     const verifyToken = (req) => {
         if (!req.headers.cookie) return null;
         const cookies = cookie.parse(req.headers.cookie);
-        const token = cookies['chatting-web'];
+        const token = cookies['mychattingweb'];
         if (!token) return null;
         try {
             return jwt.verify(token, process.env.JWT_SECRET);

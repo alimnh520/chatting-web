@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
         res.setHeader(
             "Set-Cookie",
-            `chatting-web=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400${isProduction ? "; Secure" : ""}`
+            `mychattingweb=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400${isProduction ? "; Secure" : ""}`
         );
 
         return res.status(200).json({
