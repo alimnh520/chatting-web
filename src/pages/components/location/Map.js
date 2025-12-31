@@ -9,7 +9,7 @@ export default function Map({ location }) {
     useEffect(() => {
         if (!window.google) {
             const script = document.createElement("script");
-            script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyDpPGMrOreBlsG2GGRFsOa9pOF9iJt1kXU`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.MAP_SECTET}`;
             script.async = true;
             script.onload = initMap;
             document.head.appendChild(script);
