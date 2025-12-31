@@ -29,8 +29,11 @@ export default function Chat() {
     const [file, setFile] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
 
+    const [isTyping, setIsTyping] = useState(false);
+
     const inputRef = useRef(null);
     const socketRef = useRef(null);
+    const typingTimeoutRef = useRef(null);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -100,6 +103,34 @@ export default function Chat() {
         };
     }, [user?._id]);
 
+    useEffect(() => {
+        if (!chatUser?.userId) return;
+        if (!socketRef.current) return;
+
+        const handleTyping = ({ from }) => {
+            if (from === chatUser?.userId) setIsTyping(true);
+        };
+
+        const handleStopTyping = ({ from }) => {
+            if (from === chatUser?.userId) setIsTyping(false);
+        };
+
+        socketRef.current.on("user-typing", handleTyping);
+        socketRef.current.on("user-stop-typing", handleStopTyping);
+
+        return () => {
+            socketRef.current.off("user-typing", handleTyping);
+            socketRef.current.off("user-stop-typing", handleStopTyping);
+        };
+    }, [chatUser?.userId]);
+
+    useEffect(() => {
+        setIsTyping(false);
+    }, [chatUser?.userId]);
+
+
+
+
     const getLastSeenText = (lastActiveAt) => {
         if (!lastActiveAt) return "Offline";
 
@@ -167,6 +198,26 @@ export default function Chat() {
         );
 
     }, [chatUser?._id]);
+
+    const handleTyping = (e) => {
+        setInput(e.target.value);
+
+        socketRef.current.emit("typing", {
+            from: user._id,
+            to: chatUser?.userId,
+        });
+
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+
+        typingTimeoutRef.current = setTimeout(() => {
+            socketRef.current.emit("stop-typing", {
+                from: user._id,
+                to: chatUser?.userId,
+            });
+        }, 1000);
+    };
 
 
     const updateHistoryFromMessage = (msg) => {
@@ -275,6 +326,10 @@ export default function Chat() {
                 setInput('');
                 setFile(null);
                 socketRef.current.emit("sendMessage", { message: data.message });
+                socketRef.current.emit("stop-typing", {
+                    from: user._id,
+                    to: chatUser?.userId,
+                });
                 updateHistoryFromMessage(data.message);
             }
 
@@ -612,6 +667,16 @@ export default function Chat() {
                                 </div>
                             );
                         })}
+                        {isTyping && (
+                            <div className="flex items-center gap-2 text-sm text-gray-500 ml-8 mt-1 animate-pulse">
+                                <span className="flex gap-1">
+                                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+                                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></span>
+                                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-300"></span>
+                                </span>
+                                <span>{chatUser?.username} is typing…</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Composer */}
@@ -649,12 +714,9 @@ export default function Chat() {
                                     ref={inputRef}
                                     rows={1}
                                     value={input}
-                                    onChange={e => setInput(e.target.value)}
-                                    placeholder="Aa"
-                                    className="flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none caret-indigo-600"
-                                    autoComplete="off"
-                                    autoCorrect="off"
-                                    autoCapitalize="sentences"
+                                    onChange={handleTyping}
+                                    placeholder="Aa..."
+                                    className="flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none"
                                 />
 
                                 <input

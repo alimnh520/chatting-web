@@ -50,6 +50,15 @@ export default function handler(req, res) {
                 io.to(senderId).emit("seenMessage", { conversationId });
             });
 
+            socket.on("typing", ({ from, to }) => {
+                io.to(to).emit("user-typing", { from });
+            });
+
+            socket.on("stop-typing", ({ from, to }) => {
+                io.to(to).emit("user-stop-typing", { from });
+            });
+
+
             // 📞 CALL EVENTS
             socket.on("call-user", ({ from, to, type }) => {
                 io.to(to).emit("incoming-call", { from, type });
@@ -83,9 +92,11 @@ export default function handler(req, res) {
                     );
 
                     io.emit("online-users", Array.from(onlineUsers.keys()));
+
+                    // Typing cleanup
+                    io.emit("user-stop-typing", { from: userId });
                 }
             });
-
 
         });
 
