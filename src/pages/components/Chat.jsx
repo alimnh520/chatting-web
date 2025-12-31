@@ -129,8 +129,6 @@ export default function Chat() {
     }, [chatUser?.userId]);
 
 
-
-
     const getLastSeenText = (lastActiveAt) => {
         if (!lastActiveAt) return "Offline";
 
@@ -223,29 +221,29 @@ export default function Chat() {
     const updateHistoryFromMessage = (msg) => {
         setMessages(prev => [...prev, msg]);
         setHistory(prev => {
-            const otherUserId =
-                msg.senderId === user._id ? msg.receiverId : msg.senderId;
+            const otherUserId = msg.senderId === user._id ? msg.receiverId : msg.senderId;
 
             const old = prev.find(h => h.userId === otherUserId);
 
-            const userInfo =
-                old ||
-                allUser.find(u => u._id === otherUserId);
+            let userInfo = old || allUser.find(u => u._id === otherUserId);
+
+            // যদি userInfo না মিলে, temporary placeholder রাখো
+            if (!userInfo) {
+                userInfo = {
+                    username: "Loading...",
+                    image: "/avatar.png"
+                };
+            }
 
             const newEntry = {
                 _id: msg.conversationId || old?._id || Date.now(),
                 userId: otherUserId,
-                username: userInfo?.username || "Unknown",
-                image: userInfo?.image || "/avatar.png",
+                username: userInfo.username,
+                image: userInfo.image,
                 participants: [msg.senderId, msg.receiverId],
                 lastMessage: msg.text || "📷 Image",
                 lastMessageAt: msg.createdAt,
-                unread:
-                    msg.seen
-                        ? 0
-                        : msg.senderId === user._id
-                            ? 0
-                            : (old?.unread || 0) + 1
+                unread: msg.seen ? 0 : msg.senderId === user._id ? 0 : (old?.unread || 0) + 1
             };
 
             const filtered = prev.filter(h => h.userId !== otherUserId);
@@ -253,6 +251,21 @@ export default function Chat() {
             return [newEntry, ...filtered];
         });
     };
+
+    useEffect(() => {
+        if (allUser.length === 0) return;
+
+        setHistory(prev =>
+            prev.map(h => {
+                const userInfo = allUser.find(u => u._id === h.userId);
+                if (userInfo) {
+                    return { ...h, username: userInfo.username, image: userInfo.image };
+                }
+                return h;
+            })
+        );
+    }, [allUser]);
+
 
     const handleSendMessage = async () => {
         if (!user?._id) return;
@@ -287,8 +300,8 @@ export default function Chat() {
 
             const formData = new FormData();
             formData.append("file", file);
-            formData.append("upload_preset", "ml_default");
-            formData.append("folder", "images");
+            formData.append("upload_preset", "form-submit");
+            formData.append("folder", "user");
 
             const response = await fetch(
                 `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUD_NAME}/auto/upload`,
@@ -674,7 +687,6 @@ export default function Chat() {
                                     <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></span>
                                     <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-300"></span>
                                 </span>
-                                <span>{chatUser?.username} is typing…</span>
                             </div>
                         )}
                     </div>
