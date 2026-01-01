@@ -586,7 +586,7 @@ export default function Chat() {
                     </div>
                 </aside>
 
-                {chatUser && (<main className={`flex-1 flex flex-col ${mobileView && isMobile ? 'hidden' : 'flex'} overflow-hidden transition-all duration-300`}>
+                {chatUser && (<main className={`flex-1 flex flex-col min-h-screen ${mobileView && isMobile ? 'hidden' : 'flex'} overflow-hidden transition-all duration-300`}>
 
                     <div className="sticky sm:top-0 top-0 bg-white z-10 flex items-center gap-3 border-b border-gray-200 px-5 py-3 backdrop-blur">
                         <IoIosArrowBack className={`text-2xl ${fullView ? 'rotate-0' : 'rotate-0 sm:rotate-180'} transition-all duration-300 cursor-pointer`} onClick={() => {
@@ -624,7 +624,8 @@ export default function Chat() {
                         </Link>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 pl-2 scrollbar" ref={scrollRef}>
+                    <div className="flex-1 overflow-y-auto p-4 pl-2 scrollbar pb-28" ref={scrollRef}>
+
                         {messages?.map((msg, index) => {
                             const isSender = msg.senderId === user._id;
                             const showAvatar =
@@ -692,7 +693,8 @@ export default function Chat() {
                     </div>
 
                     {/* Composer */}
-                    <div className="border-t border-gray-200 p-3">
+                    <div className="border-t border-gray-200 p-3 bg-white sticky bottom-0 z-20 safe-bottom">
+
                         <div className="flex flex-col gap-2 rounded-2xl bg-gray-50 p-2 ring-1 ring-gray-200 relative">
 
                             {/* File Preview */}
