@@ -9,7 +9,7 @@ import Link from "next/link";
 
 import { UserContext } from "../Provider";
 import { io } from "socket.io-client";
-import { usePathname } from 'next/navigation';
+import { usePathname } from "next/navigation";
 
 export default function Chat() {
     const { user } = useContext(UserContext);
@@ -35,14 +35,15 @@ export default function Chat() {
     const inputRef = useRef(null);
     const socketRef = useRef(null);
     const typingTimeoutRef = useRef(null);
+
     const pathname = usePathname();
 
     useEffect(() => {
         if (pathname !== "/") return;
 
-        if (typeof window === "undefined") return;
+        if (!mobileView) return;
 
-        window.history.pushState(null, document.title, window.location.href);
+        if (typeof window === "undefined") return;
 
         const handlePopState = (e) => {
             if (!mobileView) {
@@ -53,12 +54,13 @@ export default function Chat() {
             }
         };
 
+        window.history.pushState(null, document.title, window.location.href);
         window.addEventListener("popstate", handlePopState);
 
         return () => {
             window.removeEventListener("popstate", handlePopState);
         };
-    }, [pathname, mobileView]);
+    }, [mobileView, pathname, setMobileView, setChatUser]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
