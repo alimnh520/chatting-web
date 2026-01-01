@@ -40,7 +40,7 @@ export default function Chat() {
     console.log(router)
 
     useEffect(() => {
-        if (typeof window === "undefined" || router.pathname === '/') return;
+        if (typeof window === "undefined" || router.pathname !== '/') return;
 
         const handlePopState = (e) => {
             if (!mobileView) {
