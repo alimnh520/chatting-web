@@ -58,7 +58,7 @@ export default function Chat() {
     }, [mobileView]);
 
     useEffect(() => {
-        if (typeof window === "undefined" && mobileView === false) return;
+        if (typeof window === "undefined" && mobileView === true) return;
 
         const handleResize = () => {
             const mobile = window.innerWidth < 660;
