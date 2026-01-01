@@ -467,65 +467,57 @@ export default function Chat() {
                                     onFocus={() => setIsSearch(true)}
                                     onChange={e => setSearchInput(e.target.value)}
                                 />
-                                {isSearch && (
-                                    <button
-                                        className=" bg-blue-600 text-white w-8 h-8 flex items-center justify-center rounded-full shadow-md hover:bg-blue-700 transition z-20"
-                                        onClick={() => {
-                                            if (window.innerWidth < 660) {
-                                                setChatUser(null);
-                                            }
-                                            setIsSearch(false);
-                                        }}
-                                    >
-                                        <ImCross className="w-4 h-4" />
-                                    </button>
-                                )}
+
                             </div>
                             {isSearch && (
-                                <div className="absolute top-10 left-0 w-full max-h-80 bg-white rounded-2xl shadow-lg border border-gray-200 p-4 overflow-y-auto z-10 scrollbar">
-                                    {filteredUsers.map(u => (
-                                        <div key={u._id} className="flex bg-gray-200 items-center gap-3 p-2 rounded-xl hover:bg-gray-100 cursor-pointer"
-                                            onClick={() => {
-                                                const conv = history.find(v => v.userId === u._id);
+                                <div className="absolute top-10 left-0 w-full h-screen" onClick={() => {
+                                    if (isSearch) setIsSearch(false);
+                                }}>
+                                    <div className="w-full relative max-h-80 bg-white rounded-2xl shadow-lg border border-gray-200 p-4 overflow-y-auto z-10 scrollbar">
+                                        {filteredUsers.map(u => (
+                                            <div key={u._id} className="flex bg-gray-200 items-center gap-3 p-2 rounded-xl hover:bg-gray-100 cursor-pointer"
+                                                onClick={() => {
+                                                    const conv = history.find(v => v.userId === u._id);
 
-                                                if (conv) {
-                                                    setChatUser(conv);
-                                                } else {
-                                                    setChatUser({
-                                                        _id: null,
-                                                        userId: u._id,
-                                                        username: u.username,
-                                                        image: u.image,
-                                                        lastActiveAt: u.lastActiveAt,
-                                                        participants: [user._id, u._id]
-                                                    });
+                                                    if (conv) {
+                                                        setChatUser(conv);
+                                                    } else {
+                                                        setChatUser({
+                                                            _id: null,
+                                                            userId: u._id,
+                                                            username: u.username,
+                                                            image: u.image,
+                                                            lastActiveAt: u.lastActiveAt,
+                                                            participants: [user._id, u._id]
+                                                        });
 
-                                                    setMessages([]);
-                                                }
-                                                setMobileView(false);
-                                                setIsSearch(false);
-                                            }}
-                                        >
-                                            <img src={u.image} alt={u.username} className="h-10 w-10 rounded-full object-cover" />
-                                            <div>
-                                                <p className="font-medium">{u._id === user?._id ? 'You' : u.username}</p>
-                                                <p className="text-xs text-gray-500">
-                                                    {onlineUsers.includes(u._id) ? (
-                                                        <span className="flex items-center gap-1 text-green-600">
-                                                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                                                            Active now
-                                                        </span>
-                                                    )
-                                                        : (
-                                                            <span className="text-gray-500">
-                                                                {getLastSeenText(u._id)}
-
+                                                        setMessages([]);
+                                                    }
+                                                    setMobileView(false);
+                                                    setIsSearch(false);
+                                                }}
+                                            >
+                                                <img src={u.image} alt={u.username} className="h-10 w-10 rounded-full object-cover" />
+                                                <div>
+                                                    <p className="font-medium">{u._id === user?._id ? 'You' : u.username}</p>
+                                                    <p className="text-xs text-gray-500">
+                                                        {onlineUsers.includes(u._id) ? (
+                                                            <span className="flex items-center gap-1 text-green-600">
+                                                                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                                                Active now
                                                             </span>
-                                                        )}
-                                                </p>
+                                                        )
+                                                            : (
+                                                                <span className="text-gray-500">
+                                                                    {getLastSeenText(u._id)}
+
+                                                                </span>
+                                                            )}
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>
