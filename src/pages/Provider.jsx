@@ -1,11 +1,13 @@
 "use client";
 
+import { useRouter } from "next/router";
 import { createContext, useEffect, useState } from "react";
 
 export const UserContext = createContext();
 
 export default function AppProvider({ children }) {
     const [user, setUser] = useState(null);
+    const router = useRouter();
 
     useEffect(() => {
         fetch("/api/socket");
@@ -17,6 +19,10 @@ export default function AppProvider({ children }) {
                 const res = await fetch('/api/mydata', { method: 'GET' });
                 if (res.ok) {
                     const data = await res.json();
+                    if (!data.user) {
+                        router.replace('/components/login');
+                        return;
+                    }
                     setUser(data.user);
                 } else {
                     setUser(null);
