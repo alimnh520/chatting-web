@@ -563,10 +563,10 @@ export default function Chat() {
                                     <div className="min-w-0 flex flex-col">
                                         <p className="truncate font-medium">{conv.username}</p>
 
-                                        <div className={`flex items-center gap-2 ${conv.participants[0] !== user?._id && 'gap-2'}`}>
-                                            {conv.participants[0] !== user?._id && (<p className="truncate text-xs text-gray-500 max-w-28">
-                                                {conv.lastMessage}
-                                            </p>)}
+                                        <div className={`flex items-center gap-2`}>
+                                            <p className="truncate text-xs text-gray-500 max-w-28">
+                                                {conv.participants[0] == user?._id ? `You: ${conv.lastMessage}` : conv.lastMessage}
+                                            </p>
 
                                             <p className="text-[10px] text-gray-400">
                                                 {isToday
@@ -644,7 +644,7 @@ export default function Chat() {
                                 msg.seen &&
                                 index === lastReadIndex;
                             return (
-                                <div key={msg._id} className={`mb-2 flex sendmessage ${isSender ? "justify-end" : "justify-start"}`}>
+                                <div key={msg._id} className={`mb-2 flex ${isSender ? "justify-end" : "justify-start"}`}>
                                     <div className="flex flex-col items-end">
                                         <div className="flex items-start justify-start gap-1">
                                             {!isSender && <img src={chatUser.image} alt="user" className="w-5 h-5 mt-px rounded-full object-center object-cover" />}

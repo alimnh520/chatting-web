@@ -26,17 +26,3 @@ body {
 .scrollbar::-webkit-scrollbar {
   display: none;
 }
-
-.sendmessage {
-  animation: sendmessage 0.2s linear;
-}
-
-@keyframes sendmessage {
-  0% {
-    opacity: 0;
-  }
-
-  100% {
-    opacity: 1;
-  }
-}

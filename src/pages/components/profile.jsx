@@ -16,6 +16,7 @@ export default function ProfilePage() {
         image: user?.image || "",
         imageId: user?.imageId || ""
     });
+    const deleteId = user?.imageId;
 
 
     const handleChange = (e) => {
@@ -29,29 +30,29 @@ export default function ProfilePage() {
         setForm({ ...form, image: file });
     };
 
-    const handleSave = async () => {
-        try {
-            setIsUploading(true);
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setIsUploading(true);
 
-            let imageUrl = form.imageId ? form.image : null;
+        try {
+            let imageUrl = form.imageId || null;
             let imageId = form.imageId || null;
 
             if (form.image instanceof File) {
-                const data = new FormData();
-                data.append("file", form.image);
-                data.append("upload_preset", "form-submit");
-                data.append("folder", "users");
+                const formData = new FormData();
+                formData.append("file", form.image);
+                formData.append("upload_preset", "form-submit");
+                formData.append("folder", "user");
 
                 const resCloud = await fetch(
-                    `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUD_NAME}/image/upload`,
-                    { method: "POST", body: data }
+                    `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUD_NAME}/auto/upload`,
+                    { method: "POST", body: formData }
                 );
 
                 const uploadResult = await resCloud.json();
-                console.log("Cloudinary Response:", uploadResult);
 
                 if (!uploadResult.secure_url) {
-                    alert("⚠️ ছবি আপলোড ব্যর্থ! Cloudinary check কর।");
+                    alert("⚠️ ছবি আপলোড ব্যর্থ! Cloudinary চেক কর।");
                     setIsUploading(false);
                     return;
                 }
@@ -64,30 +65,33 @@ export default function ProfilePage() {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
+                    userId: user?._id,
                     username: form.username,
                     email: form.email,
                     password: form.password,
                     imageUrl,
                     imageId,
+                    deleteId
                 }),
             });
 
-            setIsUploading(false);
+            const dataRes = await res.json();
 
-            if (res.ok) {
-                alert("Profile updated successfully!");
+            if (res.ok && dataRes.success) {
+                alert("✅ প্রোফাইল আপডেট সফল!");
                 window.location.reload();
             } else {
-                const errText = await res.text();
-                alert("Update failed! " + errText);
+                alert("❌ আপডেট ব্যর্থ! " + (dataRes.message || ""));
             }
 
         } catch (err) {
             console.error("Save error:", err);
+            alert("⚠️ কিছু ভুল হয়েছে! কনসোল চেক কর।");
+        } finally {
             setIsUploading(false);
-            alert("Something went wrong! Check console for details.");
         }
     };
+
 
 
 
@@ -223,10 +227,10 @@ export default function ProfilePage() {
                     {editMode ? (
                         <>
                             <button
-                                onClick={handleSave}
+                                onClick={(e) => handleSave(e)}
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-full font-semibold transition"
                             >
-                                Save Changes
+                                Save
                             </button>
                             <button
                                 onClick={() => setEditMode(false)}
