@@ -1,7 +1,7 @@
 import { connectDB } from "@/lib/connectDb";
 import { getCollection } from "@/lib/mongoclient";
 import bcrypt from "bcryptjs";
-import jwt from 'jsonwebtoken'
+import jwt from "jsonwebtoken";
 
 export default async function handler(req, res) {
     if (req.method !== "POST") {
@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { username, email, password, imageUrl, imageId } = await req.body;
+        const { username, email, password, imageUrl, imageId } = req.body;
 
         if (!username || !email || !password) {
             return res.status(400).json({ message: "সব ফিল্ড আবশ্যক" });
@@ -23,6 +23,7 @@ export default async function handler(req, res) {
             return res.status(409).json({ message: "এই ইমেইল আগে থেকেই আছে" });
         }
 
+        // 🔐 password hash করা (strongly recommended)
         // const hashedPassword = await bcrypt.hash(password, 10);
 
         const result = await collection.insertOne({
@@ -34,21 +35,24 @@ export default async function handler(req, res) {
             createdAt: new Date(),
         });
 
-        const userId = result.insertedId;
-
-
         const token = jwt.sign(
-            { user_id: userId },
+            { user_id: result.insertedId },
             process.env.JWT_SECRET,
             { expiresIn: "1d" }
         );
 
         const isProduction = process.env.NODE_ENV === "production";
 
-        res.setHeader(
-            "Set-Cookie",
-            `mychattingweb=${token}; Path=/; HttpOnly; SameSite=None; Max-Age=86400${isProduction ? "; Secure" : ""}`
-        );
+        const cookie = [
+            `mychattingweb=${token}`,
+            "Path=/",
+            "HttpOnly",
+            "Max-Age=86400",
+            isProduction ? "SameSite=None" : "SameSite=Lax",
+            isProduction ? "Secure" : "",
+        ].join("; ");
+
+        res.setHeader("Set-Cookie", cookie);
 
         return res.status(201).json({
             success: true,

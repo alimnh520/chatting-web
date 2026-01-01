@@ -5,7 +5,7 @@ export async function middleware(request) {
   const pathname = request.nextUrl.pathname;
   const token = request.cookies.get("mychattingweb")?.value;
 
-  if (pathname.startsWith("/")) {
+  if (pathname.startsWith("/") || pathname.startsWith("/components/profile")) {
     if (!token) {
       return NextResponse.redirect(
         new URL("/components/login", request.url)
@@ -27,5 +27,5 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/",],
+  matcher: ["/", "/components/profile"],
 };

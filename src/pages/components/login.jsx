@@ -21,6 +21,7 @@ export default function page() {
             const res = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: "include",
                 body: JSON.stringify(form),
             });
             const data = await res.json();
@@ -53,7 +54,7 @@ export default function page() {
 
                 {/* 🔹 Title */}
                 <h2 className="text-2xl font-extrabold text-center text-gray-800 mb-1">
-                    Login Account 
+                    Login Account
                 </h2>
                 <p className="text-center text-gray-600 mb-6 text-sm">
                     নিরাপদে আপনার মেসেজে প্রবেশ করুন

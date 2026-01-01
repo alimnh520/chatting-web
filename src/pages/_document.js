@@ -4,11 +4,9 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
+        {/* PWA */}
         <link rel="manifest" href="/manifest.json" />
-
         <meta name="theme-color" content="#000000" />
-
-        <meta name="viewport" content="width=device-width, initial-scale=1, height=device-height, viewport-fit=cover" />
 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta
@@ -16,7 +14,6 @@ export default function Document() {
           content="black-translucent"
         />
         <meta name="apple-mobile-web-app-title" content="My Chat" />
-
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </Head>
 
