@@ -6,6 +6,8 @@ export default async function handler(req, res) {
     if (req.method === "PATCH") {
         try {
             const { userId, username, email, password, imageUrl, imageId, deleteId } = req.body;
+            
+            console.log(userId, username, email, password, imageUrl, imageId, deleteId);
 
             if (!userId) {
                 return res.status(400).json({ success: false, message: "User ID is required" });

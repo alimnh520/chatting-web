@@ -30,13 +30,19 @@ export default function ProfilePage() {
         setForm({ ...form, image: file });
     };
 
+
     const handleSave = async (e) => {
         e.preventDefault();
+
+        if (!isFormChanged()) {
+            return; // 🔥 এখানেই থামবে, কিছুই করবে না
+        }
+
         setIsUploading(true);
 
         try {
-            let imageUrl = form.imageId || null;
-            let imageId = form.imageId || null;
+            let imageUrl = user.image || null;
+            let imageId = user.imageId || null;
 
             if (form.image instanceof File) {
                 const formData = new FormData();
@@ -50,12 +56,7 @@ export default function ProfilePage() {
                 );
 
                 const uploadResult = await resCloud.json();
-
-                if (!uploadResult.secure_url) {
-                    alert("⚠️ ছবি আপলোড ব্যর্থ! Cloudinary চেক কর।");
-                    setIsUploading(false);
-                    return;
-                }
+                if (!uploadResult.secure_url) throw new Error("Image upload failed");
 
                 imageUrl = uploadResult.secure_url;
                 imageId = uploadResult.public_id;
@@ -65,33 +66,39 @@ export default function ProfilePage() {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    userId: user?._id,
+                    userId: user._id,
                     username: form.username,
                     email: form.email,
-                    password: form.password,
+                    password: form.password || undefined,
                     imageUrl,
                     imageId,
-                    deleteId
+                    deleteId: user.imageId
                 }),
             });
 
             const dataRes = await res.json();
+            if (!res.ok) throw new Error(dataRes.message);
 
-            if (res.ok && dataRes.success) {
-                alert("✅ প্রোফাইল আপডেট সফল!");
-                window.location.reload();
-            } else {
-                alert("❌ আপডেট ব্যর্থ! " + (dataRes.message || ""));
-            }
-
+            alert("✅ প্রোফাইল আপডেট সফল!");
         } catch (err) {
-            console.error("Save error:", err);
-            alert("⚠️ কিছু ভুল হয়েছে! কনসোল চেক কর।");
+            console.error(err);
+            alert("❌ আপডেট ব্যর্থ!");
         } finally {
             setIsUploading(false);
         }
     };
 
+
+    const isFormChanged = () => {
+        if (!user) return false;
+
+        return (
+            form.username !== user.username ||
+            form.email !== user.email ||
+            form.password.trim() !== "" ||
+            form.image instanceof File
+        );
+    };
 
 
 
@@ -111,7 +118,7 @@ export default function ProfilePage() {
                                     ? form.image instanceof File
                                         ? URL.createObjectURL(form.image)
                                         : form.image
-                                    : user?.image || "/placeholder.png"
+                                    : user?.image || "https://img.freepik.com/premium-vector/default-avatar-profile-icon-social-media-user-image-gray-avatar-icon-blank-profile-silhouette-vector-illustration_561158-3383.jpg?semt=ais_hybrid&w=740&q=80"
                             }
                             alt="Profile"
                             className="w-36 h-36 rounded-full object-cover border-4 border-white shadow-md"
@@ -223,15 +230,22 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Buttons */}
+                {/* Buttons */}
                 <div className="flex justify-center gap-4 mt-10">
                     {editMode ? (
                         <>
                             <button
-                                onClick={(e) => handleSave(e)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-full font-semibold transition"
+                                onClick={handleSave}
+                                disabled={!isFormChanged() || isUploading}
+                                className={`px-8 py-2 rounded-full font-semibold transition
+    ${!isFormChanged() || isUploading
+                                        ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                                        : "bg-blue-600 hover:bg-blue-700 text-white"
+                                    }`}
                             >
-                                Save
+                                {isUploading ? "Saving..." : "Save"}
                             </button>
+
                             <button
                                 onClick={() => setEditMode(false)}
                                 className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-8 py-2 rounded-full font-semibold transition"
