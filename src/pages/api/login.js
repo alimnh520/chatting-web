@@ -26,11 +26,13 @@ export default async function handler(req, res) {
             { expiresIn: "1d" }
         );
 
+        // Production environment
         const isProduction = process.env.NODE_ENV === "production";
 
+        // Updated cookie
         res.setHeader(
             "Set-Cookie",
-            `mychattingweb=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400${isProduction ? "; Secure" : ""}`
+            `mychattingweb=${token}; Path=/; HttpOnly; SameSite=None; Max-Age=86400${isProduction ? "; Secure" : ""}`
         );
 
         return res.status(200).json({
