@@ -692,7 +692,7 @@ export default function Chat() {
                     </div>
 
                     {/* Composer */}
-                    <div className="border-t border-gray-200 p-3 mb-10 sm:mb-0">
+                    <div className="border-t border-gray-200 p-3">
                         <div className="flex flex-col gap-2 rounded-2xl bg-gray-50 p-2 ring-1 ring-gray-200 relative">
 
                             {/* File Preview */}
