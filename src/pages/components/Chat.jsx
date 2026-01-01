@@ -9,7 +9,6 @@ import Link from "next/link";
 
 import { UserContext } from "../Provider";
 import { io } from "socket.io-client";
-import { useRouter } from "next/router";
 
 export default function Chat() {
     const { user } = useContext(UserContext);
@@ -36,11 +35,8 @@ export default function Chat() {
     const socketRef = useRef(null);
     const typingTimeoutRef = useRef(null);
 
-    const router = useRouter();
-    console.log(router)
-
     useEffect(() => {
-        if (typeof window === "undefined" || router.pathname !== '/') return;
+        if (typeof window === "undefined") return;
 
         const handlePopState = (e) => {
             if (!mobileView) {
@@ -62,7 +58,7 @@ export default function Chat() {
     }, [mobileView]);
 
     useEffect(() => {
-        if (typeof window === "undefined") return;
+        if (typeof window === "undefined" && mobileView === false) return;
 
         const handleResize = () => {
             const mobile = window.innerWidth < 660;
@@ -75,6 +71,7 @@ export default function Chat() {
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
+    console.log(mobileView)
 
     useEffect(() => {
         if (!user?._id) return;
