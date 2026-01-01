@@ -9,7 +9,6 @@ import Link from "next/link";
 
 import { UserContext } from "../Provider";
 import { io } from "socket.io-client";
-import { usePathname } from "next/navigation";
 
 export default function Chat() {
     const { user } = useContext(UserContext);
@@ -36,30 +35,25 @@ export default function Chat() {
     const socketRef = useRef(null);
     const typingTimeoutRef = useRef(null);
 
-    const pathname = usePathname();
-
     useEffect(() => {
-        if (pathname !== "/") return;
-
         if (typeof window === "undefined") return;
 
-        const handlePopState = (e) => {
-            if (!mobileView) {
+        if (!mobileView) {
+            const handlePopState = (e) => {
                 e.preventDefault();
                 setMobileView(true);
                 setChatUser(null);
-                window.history.pushState(null, document.title, window.location.href);
-            }
-        };
+            };
 
-        window.history.pushState(null, document.title, window.location.href);
-        window.addEventListener("popstate", handlePopState);
+            window.addEventListener("popstate", handlePopState);
 
-        return () => window.removeEventListener("popstate", handlePopState);
+            window.history.pushState(null, document.title, window.location.href);
 
-    }, [mobileView, pathname, setMobileView, setChatUser]);
-     
-    console.log(mobileView, pathname, chatUser)
+            return () => window.removeEventListener("popstate", handlePopState);
+        }
+    }, [mobileView]);
+
+
 
     useEffect(() => {
         if (typeof window === "undefined") return;
