@@ -9,6 +9,7 @@ import Link from "next/link";
 
 import { UserContext } from "../Provider";
 import { io } from "socket.io-client";
+import { usePathname } from 'next/navigation';
 
 export default function Chat() {
     const { user } = useContext(UserContext);
@@ -36,6 +37,8 @@ export default function Chat() {
     const typingTimeoutRef = useRef(null);
 
     useEffect(() => {
+        if (pathname !== "/") return;
+
         if (typeof window === "undefined") return;
 
         const handlePopState = (e) => {
@@ -46,19 +49,16 @@ export default function Chat() {
                 window.history.pushState(null, document.title, window.location.href);
             }
         };
-
         window.history.pushState(null, document.title, window.location.href);
-
         window.addEventListener("popstate", handlePopState);
 
         return () => {
             window.removeEventListener("popstate", handlePopState);
         };
-
-    }, [mobileView]);
+    }, [mobileView, pathname]);
 
     useEffect(() => {
-        if (typeof window === "undefined" || mobileView === true) return;
+        if (typeof window === "undefined") return;
 
         const handleResize = () => {
             const mobile = window.innerWidth < 660;
@@ -71,7 +71,6 @@ export default function Chat() {
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
-    console.log(mobileView)
 
     useEffect(() => {
         if (!user?._id) return;
