@@ -18,11 +18,11 @@
 }
 
 html,
-body {
+body,
+#__next {
   height: 100%;
   overflow: hidden;
 }
-
 
 body {
   background: var(--background);
