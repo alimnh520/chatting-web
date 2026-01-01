@@ -41,8 +41,6 @@ export default function Chat() {
     useEffect(() => {
         if (pathname !== "/") return;
 
-        if (!mobileView) return;
-
         if (typeof window === "undefined") return;
 
         const handlePopState = (e) => {
@@ -57,10 +55,11 @@ export default function Chat() {
         window.history.pushState(null, document.title, window.location.href);
         window.addEventListener("popstate", handlePopState);
 
-        return () => {
-            window.removeEventListener("popstate", handlePopState);
-        };
+        return () => window.removeEventListener("popstate", handlePopState);
+
     }, [mobileView, pathname, setMobileView, setChatUser]);
+     
+    console.log(mobileView, pathname, chatUser)
 
     useEffect(() => {
         if (typeof window === "undefined") return;
