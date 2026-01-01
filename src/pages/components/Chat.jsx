@@ -624,12 +624,7 @@ export default function Chat() {
                         </Link>
                     </div>
 
-                    <div
-                        className="flex-1 overflow-y-auto p-4 pl-2 scrollbar"
-                        style={{ paddingBottom: '80px' }}
-                        ref={scrollRef}
-                    >
-
+                    <div className="flex-1 overflow-y-auto p-4 pl-2 scrollbar" ref={scrollRef}>
                         {messages?.map((msg, index) => {
                             const isSender = msg.senderId === user._id;
                             const showAvatar =
@@ -697,8 +692,10 @@ export default function Chat() {
                     </div>
 
                     {/* Composer */}
-                    <div className="border-t border-gray-200 p-3 bg-white sm:bg-gray-50 sticky bottom-0 z-20">
-                        <div className="flex items-center gap-2 rounded-2xl bg-gray-50 p-2 ring-1 ring-gray-200 relative">
+                    <div className="border-t border-gray-200 p-3">
+                        <div className="flex flex-col gap-2 rounded-2xl bg-gray-50 p-2 ring-1 ring-gray-200 relative">
+
+                            {/* File Preview */}
                             {file && (
                                 <div className="relative w-32 h-32">
                                     {file.type.startsWith("video/") ? (
@@ -723,35 +720,41 @@ export default function Chat() {
                                 </div>
                             )}
 
-                            <textarea
-                                ref={inputRef}
-                                rows={1}
-                                value={input}
-                                onChange={handleTyping}
-                                placeholder="Aa..."
-                                className="flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none min-h-[36px]"
-                            />
 
-                            <input
-                                type="file"
-                                accept="image/*,video/*"
-                                onChange={e => setFile(e.target.files[0])}
-                                className="hidden"
-                                id="fileInput"
-                            />
+                            <div className="flex items-end gap-2">
+                                <textarea
+                                    ref={inputRef}
+                                    rows={1}
+                                    value={input}
+                                    onChange={handleTyping}
+                                    placeholder="Aa..."
+                                    className="flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none"
+                                />
 
-                            <label htmlFor="fileInput" className="cursor-pointer flex items-center justify-center">
-                                <FaImage className="text-gray-600 text-3xl hover:text-indigo-500" />
-                            </label>
+                                <input
+                                    type="file"
+                                    accept="image/*,video/*"
+                                    onChange={e => setFile(e.target.files[0])}
+                                    className="hidden"
+                                    id="fileInput"
+                                />
 
-                            <button
-                                className={`inline-flex h-9 items-center justify-center rounded-xl px-4 text-sm font-semibold text-white ${input || file ? 'bg-indigo-700' : 'bg-indigo-500 pointer-events-none'
-                                    }`}
-                                onClick={handleSendMessage}
-                                disabled={isUploading}
-                            >
-                                {isUploading ? "Uploading..." : "Send"}
-                            </button>
+                                <label htmlFor="fileInput" className="cursor-pointer self-center flex items-center justify-center">
+                                    <FaImage className="text-gray-600 text-3xl hover:text-indigo-500" />
+                                </label>
+                                <button
+                                    className={`inline-flex h-9 items-center ${isUploading ? 'pointer-events-none' : 'pointer-events-auto'} justify-center rounded-xl px-4 text-sm font-semibold text-white ${input || file ? 'bg-indigo-700' : 'bg-indigo-500 pointer-events-none'}`}
+                                    onClick={() => {
+                                        if (inputRef.current) {
+                                            inputRef.current.focus({ preventScroll: true });
+                                        }
+                                        handleSendMessage();
+                                    }}
+                                    disabled={isUploading}
+                                >
+                                    {isUploading ? "Uploading..." : "Send"}
+                                </button>
+                            </div>
                         </div>
                     </div>
 
