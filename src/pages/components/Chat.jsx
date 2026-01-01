@@ -42,6 +42,8 @@ export default function Chat() {
 
         if (typeof window === "undefined") return;
 
+        window.history.pushState(null, document.title, window.location.href);
+
         const handlePopState = (e) => {
             if (!mobileView) {
                 e.preventDefault();
@@ -50,13 +52,13 @@ export default function Chat() {
                 window.history.pushState(null, document.title, window.location.href);
             }
         };
-        window.history.pushState(null, document.title, window.location.href);
+
         window.addEventListener("popstate", handlePopState);
 
         return () => {
             window.removeEventListener("popstate", handlePopState);
         };
-    }, [mobileView, pathname]);
+    }, [pathname, mobileView]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
