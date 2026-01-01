@@ -14,7 +14,7 @@ export default function Document() {
           content="black-translucent"
         />
         <meta name="apple-mobile-web-app-title" content="My Chat" />
-        <link rel="apple-touch-icon" href="/icon-512.png" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
       </Head>
 
       <body className="antialiased">
