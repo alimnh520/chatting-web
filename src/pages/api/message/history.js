@@ -9,7 +9,7 @@ export default async function handler(req, res) {
         }
 
         try {
-            
+
             const convCol = await getCollection("conversations");
             const userCol = await getCollection("user");
 
@@ -32,6 +32,7 @@ export default async function handler(req, res) {
                         userId: otherUserId,
                         username: otherUser?.username,
                         image: otherUser?.image || null,
+                        lastActiveAt: otherUser?.lastActiveAt || null
                     };
                 })
             );

@@ -119,8 +119,10 @@ export default function Chat() {
         socketRef.current.on("user-stop-typing", handleStopTyping);
 
         return () => {
-            socketRef.current.off("user-typing", handleTyping);
-            socketRef.current.off("user-stop-typing", handleStopTyping);
+            if (socketRef.current) {
+                socketRef.current.off("user-typing", handleTyping);
+                socketRef.current.off("user-stop-typing", handleStopTyping);
+            }
         };
     }, [chatUser?.userId]);
 
@@ -129,16 +131,17 @@ export default function Chat() {
     }, [chatUser?.userId]);
 
 
-    const getLastSeenText = (lastActiveAt) => {
+    const getLastSeenText = (userId) => {
+        const findUser = allUser.find(v => v._id === userId);
+        const lastActiveAt = findUser?.lastActiveAt || null;
         if (!lastActiveAt) return "Offline";
-
         const now = moment();
         const last = moment(lastActiveAt);
         const diffMinutes = now.diff(last, "minutes");
         const diffHours = now.diff(last, "hours");
         const diffDays = now.diff(last, "days");
 
-        if (diffMinutes < 1) return "Just now";
+        if (diffMinutes < 1) return "Active now";
         if (diffMinutes < 60) return `Active ${diffMinutes} min ago`;
         if (diffHours < 24) return `Active ${diffHours} hr ago`;
         if (diffDays < 1) return `Last seen ${last.format("h:mm A")}`;
@@ -444,7 +447,16 @@ export default function Chat() {
             <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-white sm:bg-gray-400">
                 <aside className={` fixed sm:static top-0 left-0 z-20 h-full transform transition-all duration-300 ease-in-out ${mobileView ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0 w-full backdrop-blur ${fullView ? 'sm:w-80' : 'sm:w-0'} ${mobileView ? 'w-full' : 'w-0'} overflow-hidden border-r border-gray-200`}>
                     <div className="p-4 pb-2">
-                        <h2 className="text-xl font-semibold">Chats</h2>
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-semibold">Chats</h2>
+                            <Link href="/components/profile">
+                                <img
+                                    src={user?.image}
+                                    alt={user?.username}
+                                    className="h-11 w-11 rounded-full object-cover outline-2 outline-green-600"
+                                />
+                            </Link>
+                        </div>
                         <div className="mt-3 relative">
                             <div className="relative w-full flex items-center justify-center gap-x-1">
                                 <input
@@ -506,7 +518,7 @@ export default function Chat() {
                                                     )
                                                         : (
                                                             <span className="text-gray-500">
-                                                                {getLastSeenText(u.lastActiveAt)}
+                                                                {getLastSeenText(u._id)}
 
                                                             </span>
                                                         )}
@@ -611,7 +623,7 @@ export default function Chat() {
                                             )
                                             : (
                                                 <span className="text-gray-500">
-                                                    {getLastSeenText(chatUser.lastActiveAt)}
+                                                    {getLastSeenText(chatUser.userId)}
                                                 </span>
                                             )}
                                     </p>
