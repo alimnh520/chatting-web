@@ -37,17 +37,17 @@ export default function SignupPage() {
             let imageId = null;
 
             if (form.image) {
-                const data = new FormData();
-                data.append("file", form.image);
-                data.append("upload_preset", "my_album_preset");
-                data.append("folder", "users");
+                const formData = new FormData();
+                formData.append("file", form.image); // ✅ ঠিক হলো
+                formData.append("upload_preset", "form-submit");
+                formData.append("folder", "user");
 
-                const resCloud = await fetch(
+                const response = await fetch(
                     `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUD_NAME}/auto/upload`,
                     { method: "POST", body: formData }
                 );
 
-                const uploadResult = await resCloud.json();
+                const uploadResult = await response.json();
                 if (!uploadResult.secure_url) {
                     toast.error("⚠️ ছবি আপলোড ব্যর্থ!");
                     setLoading(false);
@@ -57,6 +57,7 @@ export default function SignupPage() {
                 imageUrl = uploadResult.secure_url;
                 imageId = uploadResult.public_id;
             }
+
 
             const res = await fetch("/api/signup", {
                 method: "POST",
