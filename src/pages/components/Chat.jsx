@@ -35,6 +35,7 @@ export default function Chat() {
     const inputRef = useRef(null);
     const socketRef = useRef(null);
     const typingTimeoutRef = useRef(null);
+    const pathname = usePathname();
 
     useEffect(() => {
         if (pathname !== "/") return;
