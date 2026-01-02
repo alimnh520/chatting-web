@@ -100,6 +100,7 @@ export default function Chat() {
         }
     }, [history]);
 
+
     useEffect(() => {
         if (!user?._id) return;
 
@@ -299,17 +300,10 @@ export default function Chat() {
                 username: userInfo.username,
                 image: userInfo.image,
                 participants: [msg.senderId, msg.receiverId],
-
                 lastMessage: msg.text || "📷 Image",
                 lastMessageAt: msg.createdAt,
-
                 lastMessageSenderId: msg.senderId,
-
-                unread: msg.seen
-                    ? 0
-                    : msg.senderId === user._id
-                        ? 0
-                        : (old?.unread || 0) + 1
+                unread: msg.senderId === user._id ? 0 : (old?.unread || 0) + 1 // শুধু receiver এর জন্য increase
             };
 
             const filtered = prev.filter(h => h.userId !== otherUserId);
@@ -645,11 +639,12 @@ export default function Chat() {
                                         </div>
                                     </div>
 
-                                    {unread > 0 && (
+                                    {conv.unread > 0 && (
                                         <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-semibold text-white bg-red-500 rounded-full">
-                                            {unread}
+                                            {conv.unread}
                                         </span>
                                     )}
+
                                 </button>
                             );
                         })}
