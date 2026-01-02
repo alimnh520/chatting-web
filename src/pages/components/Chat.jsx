@@ -130,13 +130,20 @@ export default function Chat() {
                     }
                 }
             });
-
             socketRef.current.on("seenMessage", ({ conversationId }) => {
                 setMessages(prev =>
                     prev.map(m =>
                         m.conversationId === conversationId
                             ? { ...m, seen: true }
                             : m
+                    )
+                );
+
+                setHistory(prev =>
+                    prev.map(h =>
+                        h._id === conversationId
+                            ? { ...h, unread: 0 }
+                            : h
                     )
                 );
             });
@@ -277,37 +284,39 @@ export default function Chat() {
 
     const updateHistoryFromMessage = (msg) => {
         setMessages(prev => [...prev, msg]);
+
         setHistory(prev => {
-            const otherUserId = msg.senderId === user._id ? msg.receiverId : msg.senderId;
+            const otherUserId =
+                msg.senderId === user._id ? msg.receiverId : msg.senderId;
 
             const old = prev.find(h => h.userId === otherUserId);
 
-            let userInfo = old || allUser.find(u => u._id === otherUserId);
-
-            if (!userInfo) {
-                userInfo = {
-                    username: "Loading...",
-                    image: "/avatar.png"
-                };
-            }
+            // ✅ যদি এই chat এখন open থাকে → unread বাড়াবে না
+            const isChatOpen =
+                chatUser?.userId === otherUserId;
 
             const newEntry = {
                 _id: msg.conversationId || old?._id || Date.now(),
                 userId: otherUserId,
-                username: userInfo.username,
-                image: userInfo.image,
+                username: old?.username || "Loading...",
+                image: old?.image || "/avatar.png",
                 participants: [msg.senderId, msg.receiverId],
                 lastMessage: msg.text || "📷 Image",
                 lastMessageAt: msg.createdAt,
                 lastMessageSenderId: msg.senderId,
-                unread: msg.senderId === user._id ? 0 : (old?.unread || 0) + 1
+                unread:
+                    msg.senderId === user._id
+                        ? 0
+                        : isChatOpen
+                            ? 0
+                            : (old?.unread || 0) + 1
             };
 
             const filtered = prev.filter(h => h.userId !== otherUserId);
-
             return [newEntry, ...filtered];
         });
     };
+
 
     useEffect(() => {
         if (allUser.length === 0) return;
