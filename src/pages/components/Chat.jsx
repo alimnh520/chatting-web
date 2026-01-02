@@ -240,9 +240,17 @@ export default function Chat() {
                 username: userInfo.username,
                 image: userInfo.image,
                 participants: [msg.senderId, msg.receiverId],
+
                 lastMessage: msg.text || "📷 Image",
                 lastMessageAt: msg.createdAt,
-                unread: msg.seen ? 0 : msg.senderId === user._id ? 0 : (old?.unread || 0) + 1
+
+                lastMessageSenderId: msg.senderId,
+
+                unread: msg.seen
+                    ? 0
+                    : msg.senderId === user._id
+                        ? 0
+                        : (old?.unread || 0) + 1
             };
 
             const filtered = prev.filter(h => h.userId !== otherUserId);
