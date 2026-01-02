@@ -47,12 +47,14 @@ export default async function handler(req, res) {
                 $set: {
                     lastMessage: text || "📷 Image",
                     lastMessageAt: new Date(),
+                    lastMessageSenderId: senderId,
                 },
                 $inc: {
                     [`unreadCount.${receiverId}`]: 1,
                 },
             }
         );
+
 
         return res.status(200).json({ success: true, message: newMessage });
     } catch (err) {

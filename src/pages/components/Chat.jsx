@@ -438,6 +438,8 @@ export default function Chat() {
         return -1;
     })();
 
+    console.log(user?._id);
+
     return (
         <div className="h-screen w-full bg-gradient-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
             <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-white sm:bg-gray-400">
@@ -520,6 +522,7 @@ export default function Chat() {
                     </div>
                     <div className="h-[calc(100%-92px)] overflow-y-auto">
                         {history.map(conv => {
+                            console.log(conv);
                             const unread = conv.unread || 0;
 
                             const lastMsgDate = conv.lastMessageAt
@@ -553,7 +556,9 @@ export default function Chat() {
 
                                         <div className={`flex items-center gap-2`}>
                                             <p className="truncate text-xs text-gray-500 max-w-28">
-                                                {conv.participants[0] == user?._id ? `You: ${conv.lastMessage}` : conv.lastMessage}
+                                                {conv.lastMessageSenderId === user?._id
+                                                    ? `You: ${conv.lastMessage}`
+                                                    : conv.lastMessage}
                                             </p>
 
                                             <p className="text-[10px] text-gray-400">
