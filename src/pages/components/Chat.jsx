@@ -67,6 +67,23 @@ export default function Chat() {
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
+    useEffect(() => {
+        if ("Notification" in window && navigator.serviceWorker) {
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    console.log("Notification permission granted! 🥳");
+                }
+            });
+        }
+    }, []);
+
+    useEffect(() => {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(reg => console.log("Service Worker registered!"))
+                .catch(err => console.log("Service Worker registration failed:", err));
+        }
+    }, []);
 
     useEffect(() => {
         if (!user?._id) return;
@@ -76,6 +93,26 @@ export default function Chat() {
         socketRef.current.emit("join", { userId: user._id });
 
         socketRef.current.on("receiveMessage", updateHistoryFromMessage);
+
+        socketRef.current.on("receiveMessage", (msg) => {
+            updateHistoryFromMessage(msg);
+
+            if (document.hidden) {
+                if (Notification.permission === "granted") {
+                    navigator.serviceWorker.getRegistration().then(reg => {
+                        const sender = msg.senderId === user?._id ? user : allUser.find(u => u._id === msg.senderId) || {};
+                        reg.showNotification(sender.username || "New Message", {
+                            body: msg.text || "📷 Image",
+                            icon: sender.image || '/icon-512.png',
+                            badge: '/icon-512.png',
+                            data: { conversationId: msg.conversationId }
+                        });
+
+                    });
+                }
+            }
+        });
+
 
         socketRef.current.on("seenMessage", ({ conversationId }) => {
             setMessages(prev =>
@@ -226,7 +263,6 @@ export default function Chat() {
 
             let userInfo = old || allUser.find(u => u._id === otherUserId);
 
-            // যদি userInfo না মিলে, temporary placeholder রাখো
             if (!userInfo) {
                 userInfo = {
                     username: "Loading...",
@@ -413,7 +449,6 @@ export default function Chat() {
     }, [user?._id]);
 
 
-
     useEffect(() => {
         const fetchAllUsers = async () => {
             try {
@@ -447,8 +482,6 @@ export default function Chat() {
         }
         return -1;
     })();
-
-    console.log(user?._id);
 
     return (
         <div className="h-screen w-full bg-gradient-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
@@ -532,7 +565,6 @@ export default function Chat() {
                     </div>
                     <div className="h-[calc(100%-92px)] overflow-y-auto">
                         {history.map(conv => {
-                            console.log(conv);
                             const unread = conv.unread || 0;
                             // const unreadCount = 
 
