@@ -12,15 +12,18 @@ self.addEventListener('push', function (event) {
 
 self.addEventListener('notificationclick', async function (event) {
     event.notification.close();
-    const conversationId = event.notification.data.conversationId;
+    const conversationId = event.notification.data?.conversationId;
 
-    const clientsArr = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-    const client = clientsArr.find(c => c.visibilityState === 'visible');
+    if (!conversationId) return;
 
-    if (client) {
-        client.focus();
-        client.postMessage({ type: 'open-chat', conversationId });
+    const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    let chatClient = allClients.find(c => c.visibilityState === 'visible');
+
+    if (chatClient) {
+        chatClient.focus();
+        chatClient.postMessage({ type: 'open-chat', conversationId });
     } else {
-        clients.openWindow(`/chat?conversationId=${conversationId}`);
+        chatClient = await clients.openWindow(`/chat?conversationId=${conversationId}`);
     }
 });
+

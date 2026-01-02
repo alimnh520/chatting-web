@@ -4,7 +4,6 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        {/* PWA */}
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#000000" />
 
@@ -15,7 +14,11 @@ export default function Document() {
         />
         <meta name="apple-mobile-web-app-title" content="My Chat" />
         <link rel="apple-touch-icon" href="/icon-512.png" />
+
+        <link rel="icon" href="/icon-512.png" />
+        <link rel="shortcut icon" href="/icon-512.png" />
       </Head>
+
 
       <body className="antialiased">
         <Main />

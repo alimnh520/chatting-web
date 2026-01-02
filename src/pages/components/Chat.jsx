@@ -86,6 +86,21 @@ export default function Chat() {
     }, []);
 
     useEffect(() => {
+        if ('serviceWorker' in navigator) {
+            const handler = (event) => {
+                if (event.data?.type === 'open-chat') {
+                    const conversationId = event.data.conversationId;
+                    const chat = history.find(h => h._id === conversationId);
+                    if (chat) setChatUser(chat);
+                }
+            };
+            navigator.serviceWorker.addEventListener('message', handler);
+
+            return () => navigator.serviceWorker.removeEventListener('message', handler);
+        }
+    }, [history]);
+
+    useEffect(() => {
         if (!user?._id) return;
 
         const setupSocket = async () => {
