@@ -88,45 +88,52 @@ export default function Chat() {
     useEffect(() => {
         if (!user?._id) return;
 
-        socketRef.current = io({ path: "/api/socket" });
+        const setupSocket = async () => {
+            socketRef.current = io({ path: "/api/socket" });
 
-        socketRef.current.emit("join", { userId: user._id });
+            socketRef.current.emit("join", { userId: user._id });
 
-        socketRef.current.on("receiveMessage", updateHistoryFromMessage);
+            socketRef.current.on("receiveMessage", updateHistoryFromMessage);
 
-        socketRef.current.on("receiveMessage", (msg) => {
-            updateHistoryFromMessage(msg);
+            socketRef.current.on("receiveMessage", async (msg) => { // এখানে async
+                updateHistoryFromMessage(msg);
 
-            if (document.hidden) {
-                if (Notification.permission === "granted") {
-                    navigator.serviceWorker.getRegistration().then(reg => {
-                        const sender = msg.senderId === user?._id ? user : allUser.find(u => u._id === msg.senderId) || {};
-                        reg.showNotification(sender.username || "New Message", {
-                            body: msg.text || "📷 Image",
-                            icon: sender.image || '/icon-512.png',
-                            badge: '/icon-512.png',
-                            data: { conversationId: msg.conversationId }
-                        });
+                if (document.hidden) {
+                    if (Notification.permission === "granted") {
+                        const sender = msg.senderId === user?._id
+                            ? { username: "You", image: user.image }
+                            : allUser.find(u => u._id === msg.senderId) || { username: "Unknown", image: "/icon-512.png" };
 
-                    });
+                        // service worker registration
+                        const reg = await navigator.serviceWorker.getRegistration();
+                        if (reg) {
+                            reg.showNotification(sender.username || "New Message", {
+                                body: msg.text || "📷 Image",
+                                icon: sender.image || '/icon-512.png',
+                                badge: '/icon-512.png',
+                                data: { conversationId: msg.conversationId }
+                            });
+                        }
+                    }
                 }
-            }
-        });
+            });
 
+            socketRef.current.on("seenMessage", ({ conversationId }) => {
+                setMessages(prev =>
+                    prev.map(m =>
+                        m.conversationId === conversationId
+                            ? { ...m, seen: true }
+                            : m
+                    )
+                );
+            });
 
-        socketRef.current.on("seenMessage", ({ conversationId }) => {
-            setMessages(prev =>
-                prev.map(m =>
-                    m.conversationId === conversationId
-                        ? { ...m, seen: true }
-                        : m
-                )
-            );
-        });
+            socketRef.current.on("online-users", (users) => {
+                setOnlineUsers(users);
+            });
+        };
 
-        socketRef.current.on("online-users", (users) => {
-            setOnlineUsers(users);
-        });
+        setupSocket();
 
         return () => {
             if (socketRef.current) {
@@ -134,7 +141,8 @@ export default function Chat() {
                 socketRef.current = null;
             }
         };
-    }, [user?._id]);
+    }, [user?._id, allUser]);
+
 
     useEffect(() => {
         if (!chatUser?.userId) return;
