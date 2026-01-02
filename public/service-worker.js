@@ -15,18 +15,20 @@ self.addEventListener('push', function (event) {
     );
 });
 
-self.addEventListener('notificationclick', async function (event) {
+self.addEventListener('notificationclick', function (event) {
     event.notification.close();
-    const conversationId = event.notification.data?.conversationId;
-    if (!conversationId) return;
 
-    const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-    let chatClient = allClients.find(c => c.visibilityState === 'visible');
+    const urlToOpen = self.location.origin;
 
-    if (chatClient) {
-        chatClient.focus();
-        chatClient.postMessage({ type: 'open-chat', conversationId });
-    } else {
-        await clients.openWindow(`/`);
-    }
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true })
+            .then(windowClients => {
+                for (let client of windowClients) {
+                    if (client.url.startsWith(urlToOpen)) {
+                        return client.focus();
+                    }
+                }
+                return clients.openWindow(urlToOpen);
+            })
+    );
 });

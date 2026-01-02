@@ -111,7 +111,7 @@ export default function Chat() {
 
             socketRef.current.on("receiveMessage", updateHistoryFromMessage);
 
-            socketRef.current.on("receiveMessage", async (msg) => { // এখানে async
+            socketRef.current.on("receiveMessage", async (msg) => { 
                 updateHistoryFromMessage(msg);
 
                 if (document.hidden) {
@@ -120,7 +120,6 @@ export default function Chat() {
                             ? { username: "You", image: user.image }
                             : allUser.find(u => u._id === msg.senderId) || { username: "Unknown", image: "/icon-512.png" };
 
-                        // service worker registration
                         const reg = await navigator.serviceWorker.getRegistration();
                         if (reg) {
                             reg.showNotification(sender.username || "New Message", {
