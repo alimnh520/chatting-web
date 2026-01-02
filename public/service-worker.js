@@ -17,7 +17,6 @@ self.addEventListener('push', function (event) {
 
 self.addEventListener('notificationclick', async function (event) {
     event.notification.close();
-
     const conversationId = event.notification.data?.conversationId;
     if (!conversationId) return;
 
@@ -28,6 +27,6 @@ self.addEventListener('notificationclick', async function (event) {
         chatClient.focus();
         chatClient.postMessage({ type: 'open-chat', conversationId });
     } else {
-        await clients.openWindow(`/chat?conversationId=${conversationId}`);
+        await clients.openWindow(`/`);
     }
 });

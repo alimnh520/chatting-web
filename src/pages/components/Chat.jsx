@@ -91,24 +91,14 @@ export default function Chat() {
                 if (event.data?.type === 'open-chat') {
                     const conversationId = event.data.conversationId;
                     const chat = history.find(h => h._id === conversationId);
-                    if (chat) {
-                        setChatUser(chat);
-                    } else {
-                        setChatUser({
-                            _id: conversationId,
-                            userId: conversationId,
-                            username: "Loading...",
-                            image: "/avatar.png",
-                            participants: [conversationId]
-                        });
-                    }
+                    if (chat) setChatUser(chat);
                 }
             };
             navigator.serviceWorker.addEventListener('message', handler);
+
             return () => navigator.serviceWorker.removeEventListener('message', handler);
         }
     }, [history]);
-
 
 
     useEffect(() => {
