@@ -38,25 +38,28 @@ export default function SignupPage() {
 
             if (form.image) {
                 const formData = new FormData();
-                formData.append("file", form.image); // ✅ ঠিক হলো
+                formData.append("file", form.image);
                 formData.append("upload_preset", "form-submit");
                 formData.append("folder", "user");
 
+                formData.append("format", "jpg");
+
                 const response = await fetch(
-                    `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUD_NAME}/auto/upload`,
+                    `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUD_NAME}/image/upload`,
                     { method: "POST", body: formData }
                 );
 
                 const uploadResult = await response.json();
+
                 if (!uploadResult.secure_url) {
                     toast.error("⚠️ ছবি আপলোড ব্যর্থ!");
-                    setLoading(false);
                     return;
                 }
 
                 imageUrl = uploadResult.secure_url;
                 imageId = uploadResult.public_id;
             }
+
 
 
             const res = await fetch("/api/signup", {

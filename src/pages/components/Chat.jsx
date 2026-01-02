@@ -56,6 +56,29 @@ export default function Chat() {
     useEffect(() => {
         if (typeof window === "undefined") return;
 
+        if ("Notification" in window) {
+            if (Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+        }
+    }, []);
+
+    const showNotification = (msg) => {
+        if (!("Notification" in window)) return;
+        if (Notification.permission !== "granted") return;
+
+        if (chatUser?.userId === msg.senderId) return;
+
+        new Notification(msg.senderName || "New Message", {
+            body: msg.text || "📷 Image sent",
+            icon: msg.senderImage || "/avatar.png",
+        });
+    };
+
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
         const handleResize = () => {
             const mobile = window.innerWidth < 660;
             setIsMobile(mobile);
@@ -76,6 +99,10 @@ export default function Chat() {
         socketRef.current.emit("join", { userId: user._id });
 
         socketRef.current.on("receiveMessage", updateHistoryFromMessage);
+        socketRef.current.on("receiveMessage", (msg) => {
+            updateHistoryFromMessage(msg);
+            showNotification(msg);
+        });
 
         socketRef.current.on("seenMessage", ({ conversationId }) => {
             setMessages(prev =>
