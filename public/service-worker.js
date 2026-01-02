@@ -15,20 +15,23 @@ self.addEventListener('push', function (event) {
     );
 });
 
-self.addEventListener('notificationclick', function (event) {
+self.addEventListener('notificationclick', async function (event) {
     event.notification.close();
 
-    const urlToOpen = self.location.origin;
+    const conversationId = event.notification.data?.conversationId;
+    if (!conversationId) return;
 
-    event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true })
-            .then(windowClients => {
-                for (let client of windowClients) {
-                    if (client.url.startsWith(urlToOpen)) {
-                        return client.focus();
-                    }
-                }
-                return clients.openWindow(urlToOpen);
-            })
-    );
+    // সব window খুঁজে বের করা
+    const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    let chatClient = allClients.find(c => c.visibilityState === 'visible');
+
+    if (chatClient) {
+        // যদি open window থাকে, তাকে focus করো এবং message পাঠাও
+        chatClient.focus();
+        chatClient.postMessage({ type: 'open-chat', conversationId });
+    } else {
+        // নতুন window খুলো সরাসরি conversation URL দিয়ে
+        await clients.openWindow(`/chat?conversationId=${conversationId}`);
+    }
 });
+

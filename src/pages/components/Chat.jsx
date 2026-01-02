@@ -91,14 +91,24 @@ export default function Chat() {
                 if (event.data?.type === 'open-chat') {
                     const conversationId = event.data.conversationId;
                     const chat = history.find(h => h._id === conversationId);
-                    if (chat) setChatUser(chat);
+                    if (chat) {
+                        setChatUser(chat);
+                    } else {
+                        setChatUser({
+                            _id: conversationId,
+                            userId: conversationId, // অথবা অন্য unique id
+                            username: "Loading...",
+                            image: "/avatar.png",
+                            participants: [conversationId]
+                        });
+                    }
                 }
             };
             navigator.serviceWorker.addEventListener('message', handler);
-
             return () => navigator.serviceWorker.removeEventListener('message', handler);
         }
     }, [history]);
+
 
 
     useEffect(() => {
@@ -111,7 +121,7 @@ export default function Chat() {
 
             socketRef.current.on("receiveMessage", updateHistoryFromMessage);
 
-            socketRef.current.on("receiveMessage", async (msg) => { 
+            socketRef.current.on("receiveMessage", async (msg) => {
                 updateHistoryFromMessage(msg);
 
                 if (document.hidden) {
