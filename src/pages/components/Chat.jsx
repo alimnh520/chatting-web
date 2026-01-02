@@ -91,14 +91,24 @@ export default function Chat() {
                 if (event.data?.type === 'open-chat') {
                     const conversationId = event.data.conversationId;
                     const chat = history.find(h => h._id === conversationId);
-                    if (chat) setChatUser(chat);
+                    if (chat) {
+                        setChatUser(chat);
+                    } else {
+                        setChatUser({
+                            _id: conversationId,
+                            userId: conversationId,
+                            username: "Loading...",
+                            image: "/avatar.png",
+                            participants: [conversationId]
+                        });
+                    }
                 }
             };
             navigator.serviceWorker.addEventListener('message', handler);
-
             return () => navigator.serviceWorker.removeEventListener('message', handler);
         }
     }, [history]);
+
 
 
     useEffect(() => {
@@ -303,7 +313,7 @@ export default function Chat() {
                 lastMessage: msg.text || "📷 Image",
                 lastMessageAt: msg.createdAt,
                 lastMessageSenderId: msg.senderId,
-                unread: msg.senderId === user._id ? 0 : (old?.unread || 0) + 1 // শুধু receiver এর জন্য increase
+                unread: msg.senderId === user._id ? 0 : (old?.unread || 0) + 1
             };
 
             const filtered = prev.filter(h => h.userId !== otherUserId);
