@@ -388,28 +388,30 @@ export default function Chat() {
         if (!user?._id) return;
 
         const fetchHistory = async () => {
-            try {
-                const res = await fetch("/api/message/history", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ user_id: user._id }),
-                });
+            const res = await fetch("/api/message/history", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: user._id }),
+            });
 
-                const data = await res.json();
-                const history = data?.history || [];
+            const data = await res.json();
+            const history = data?.history || [];
 
-                setHistory(history);
-                if (history.length > 0 && !isMobile) {
-                    setChatUser(history[0]);
-                }
-            } catch (err) {
-                console.error(err);
-                setHistory([]);
+            const mappedHistory = history.map(conv => ({
+                ...conv,
+                unread: conv.unreadCount?.[user._id] || 0
+            }));
+
+            setHistory(mappedHistory);
+
+            if (mappedHistory.length > 0 && !isMobile) {
+                setChatUser(mappedHistory[0]);
             }
         };
 
         fetchHistory();
     }, [user?._id]);
+
 
 
     useEffect(() => {
@@ -532,6 +534,7 @@ export default function Chat() {
                         {history.map(conv => {
                             console.log(conv);
                             const unread = conv.unread || 0;
+                            // const unreadCount = 
 
                             const lastMsgDate = conv.lastMessageAt
                                 ? new Date(conv.lastMessageAt)
