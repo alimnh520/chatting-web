@@ -11,6 +11,7 @@ import { UserContext } from "../Provider";
 import { io } from "socket.io-client";
 
 export default function Chat() {
+    const messageCacheRef = useRef({});
     const { user } = useContext(UserContext);
     const [allUser, setAllUser] = useState([]);
     const [history, setHistory] = useState([]);
@@ -283,7 +284,16 @@ export default function Chat() {
 
 
     const updateHistoryFromMessage = (msg) => {
-        setMessages(prev => [...prev, msg]);
+        setMessages(prev => {
+            const updated = [...prev, msg];
+
+            // 🔥 cache update
+            if (msg.conversationId) {
+                messageCacheRef.current[msg.conversationId] = updated;
+            }
+
+            return updated;
+        });
 
         setHistory(prev => {
             const otherUserId =
@@ -291,7 +301,6 @@ export default function Chat() {
 
             const old = prev.find(h => h.userId === otherUserId);
 
-            // ✅ যদি এই chat এখন open থাকে → unread বাড়াবে না
             const isChatOpen =
                 chatUser?.userId === otherUserId;
 
@@ -316,6 +325,7 @@ export default function Chat() {
             return [newEntry, ...filtered];
         });
     };
+
 
 
     useEffect(() => {
@@ -417,11 +427,17 @@ export default function Chat() {
         }
     };
 
-
     useEffect(() => {
-        setMessages([]);
         if (!chatUser?._id) {
             setMessages([]);
+            return;
+        }
+
+        const convId = chatUser._id;
+
+        // ✅ যদি cache এ থাকে → backend hit না
+        if (messageCacheRef.current[convId]) {
+            setMessages(messageCacheRef.current[convId]);
             return;
         }
 
@@ -429,18 +445,19 @@ export default function Chat() {
             const res = await fetch('/api/message/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ conversationId: chatUser?._id })
+                body: JSON.stringify({ conversationId: convId })
             });
 
             const data = await res.json();
             if (data.success) {
+                messageCacheRef.current[convId] = data.messages; // 🔥 cache
                 setMessages(data.messages);
             }
         };
 
         fetchMessage();
-
     }, [chatUser?._id]);
+
 
 
     useEffect(() => {
