@@ -16,7 +16,6 @@ export default function ProfilePage() {
         image: user?.image || "",
         imageId: user?.imageId || ""
     });
-    const deleteId = user?.imageId;
 
 
     const handleChange = (e) => {
@@ -50,8 +49,6 @@ export default function ProfilePage() {
                 formData.append("upload_preset", "form-submit");
                 formData.append("folder", "user");
 
-                formData.append("format", "jpg");
-
                 const resCloud = await fetch(
                     `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUD_NAME}/image/upload`,
                     { method: "POST", body: formData }
@@ -63,6 +60,7 @@ export default function ProfilePage() {
                 imageUrl = uploadResult.secure_url;
                 imageId = uploadResult.public_id;
             }
+
 
             const res = await fetch("/api/profile", {
                 method: "PATCH",

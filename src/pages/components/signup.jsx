@@ -41,12 +41,12 @@ export default function SignupPage() {
                 formData.append("file", form.image);
                 formData.append("upload_preset", "form-submit");
                 formData.append("folder", "user");
-
-                formData.append("format", "jpg");
-
                 const response = await fetch(
                     `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUD_NAME}/image/upload`,
-                    { method: "POST", body: formData }
+                    {
+                        method: "POST",
+                        body: formData
+                    }
                 );
 
                 const uploadResult = await response.json();
@@ -59,6 +59,8 @@ export default function SignupPage() {
                 imageUrl = uploadResult.secure_url;
                 imageId = uploadResult.public_id;
             }
+
+            console.log(imageUrl);
 
 
 

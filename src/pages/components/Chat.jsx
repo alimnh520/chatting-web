@@ -29,6 +29,7 @@ export default function Chat() {
     const [input, setInput] = useState("");
     const [file, setFile] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const [isTyping, setIsTyping] = useState(false);
 
@@ -211,6 +212,27 @@ export default function Chat() {
         return "Offline";
     };
 
+    const historyActive = (userId) => {
+        const findUser = allUser.find(u => u._id === userId);
+        const lastActiveAt = findUser?.lastActiveAt;
+
+        if (!lastActiveAt) return "";
+
+        const now = moment();
+        const last = moment(lastActiveAt);
+
+        const diffSeconds = now.diff(last, "seconds");
+        const diffMinutes = now.diff(last, "minutes");
+        const diffHours = now.diff(last, "hours");
+
+        if (diffSeconds < 60) return "now";
+        if (diffMinutes < 60) return `${diffMinutes}m`;
+        if (diffHours < 24) return `${diffHours}h`;
+
+        return "";
+    };
+
+
     const markAsSeen = async () => {
         if (!chatUser?._id) return;
 
@@ -370,7 +392,7 @@ export default function Chat() {
 
         let file_url = null;
         let file_id = null;
-
+        setIsLoading(true);
         if (file) {
             setIsUploading(true);
 
@@ -408,7 +430,7 @@ export default function Chat() {
                     file_id
                 }),
             });
-
+            setIsLoading(false);
             const data = await res.json();
 
             if (data.success) {
@@ -628,11 +650,26 @@ export default function Chat() {
                                         setMobileView(false);
                                     }}
                                 >
-                                    <img
-                                        src={conv.image}
-                                        alt={conv.username}
-                                        className="h-11 w-11 rounded-full object-cover"
-                                    />
+
+
+                                    <div className="relative h-11 w-11">
+                                        <img
+                                            src={conv.image}
+                                            alt={conv.username}
+                                            className="w-full h-full rounded-full object-center object-cover"
+                                        />
+                                        <div className="absolute -bottom-1 -right-1">
+                                            {onlineUsers.includes(conv.userId)
+                                                ? (
+                                                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                                )
+                                                : (
+                                                    <span className=" bg-green-500 text-[10px] rounded-full px-1 text-white">
+                                                        {historyActive(conv.userId)}
+                                                    </span>
+                                                )}
+                                        </div>
+                                    </div>
 
                                     <div className="min-w-0 flex flex-col">
                                         <p className="truncate font-medium">{conv.username}</p>
@@ -832,17 +869,23 @@ export default function Chat() {
                                     <FaImage className="text-gray-600 text-3xl hover:text-indigo-500" />
                                 </label>
                                 <button
-                                    className={`inline-flex h-9 items-center ${isUploading ? 'pointer-events-none' : 'pointer-events-auto'} justify-center rounded-xl px-4 text-sm font-semibold text-white ${input || file ? 'bg-indigo-700' : 'bg-indigo-500 pointer-events-none'}`}
+                                    className={`inline-flex h-9 items-center justify-center rounded-xl px-4 text-sm font-semibold text-white
+        ${isUploading || isLoading ? 'pointer-events-none' : 'pointer-events-auto'}
+        ${input || file ? 'bg-indigo-700' : 'bg-indigo-500 pointer-events-none'}
+    `}
                                     onClick={() => {
-                                        if (inputRef.current) {
-                                            inputRef.current.focus({ preventScroll: true });
-                                        }
+                                        inputRef.current?.focus({ preventScroll: true });
                                         handleSendMessage();
                                     }}
-                                    disabled={isUploading}
+                                    disabled={isUploading || isLoading}
                                 >
-                                    {isUploading ? "Uploading..." : "Send"}
+                                    {isUploading
+                                        ? "Uploading..."
+                                        : isLoading
+                                            ? "Sending..."
+                                            : "Send"}
                                 </button>
+
                             </div>
                         </div>
                     </div>
