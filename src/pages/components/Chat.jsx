@@ -807,7 +807,7 @@ export default function Chat() {
 
 
 
-                            <button className="cursor-pointer size-9 bg-red-600 flex items-center -mt-3 justify-center rounded-full text-white">
+                            <button className="cursor-pointer size-9 bg-red-600 flex items-center justify-center rounded-full text-white">
                                 <IoVideocam className=" text-2xl hover:text-green-600" />
                             </button>
 
@@ -966,15 +966,15 @@ export default function Chat() {
                     </div>
 
                 </main>)}
-
-                {isAudio && (
+                {isAudio && user && (
                     <CallScreen
-                        user={chatUser}
+                        user={user}
                         socketRef={socketRef}
                         setIsAudio={setIsAudio}
                         onEnd={() => setIsCalling(false)}
                     />
                 )}
+
 
 
                 {incomingCall && (
