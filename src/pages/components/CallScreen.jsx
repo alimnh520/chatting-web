@@ -3,9 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FaPhoneSlash, FaMicrophone, FaMicrophoneSlash } from "react-icons/fa";
 
-export default function CallScreen({
-    user, socketRef, setIsAudio, onEnd
-}) {
+export default function CallScreen({ user, socketRef, setIsAudio, onEnd }) {
     const peerRef = useRef(null);
     const localStreamRef = useRef(null);
     const remoteAudioRef = useRef(null);
@@ -17,9 +15,17 @@ export default function CallScreen({
 
     if (!user) return null;
 
+    // 🟢 Start timer function
+    const startTimer = () => {
+        if (!timerRef.current) {
+            timerRef.current = setInterval(() => setCallTime(prev => prev + 1), 1000);
+        }
+    };
+
     useEffect(() => {
         const init = async () => {
             try {
+                // Local audio
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 localStreamRef.current = stream;
 
@@ -27,17 +33,19 @@ export default function CallScreen({
                     iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
                 });
 
-                stream.getTracks().forEach(track =>
-                    peerRef.current.addTrack(track, stream)
-                );
+                // Add local tracks
+                stream.getTracks().forEach(track => peerRef.current.addTrack(track, stream));
 
+                // Remote track
                 peerRef.current.ontrack = (e) => {
                     if (remoteAudioRef.current) {
                         remoteAudioRef.current.srcObject = e.streams[0];
                         setStatus("Connected");
+                        startTimer(); // Remote stream আসলে টাইমার start
                     }
                 };
 
+                // ICE candidate
                 peerRef.current.onicecandidate = (e) => {
                     if (e.candidate && socketRef.current) {
                         socketRef.current.emit("ice-candidate", {
@@ -47,6 +55,7 @@ export default function CallScreen({
                     }
                 };
 
+                // Create offer
                 const offer = await peerRef.current.createOffer();
                 await peerRef.current.setLocalDescription(offer);
 
@@ -56,14 +65,9 @@ export default function CallScreen({
                     offer
                 });
 
-                // ✅ কল ধরার সাথে সাথে টাইমার start
-                if (!timerRef.current) {
-                    timerRef.current = setInterval(() => {
-                        setCallTime(prev => prev + 1);
-                    }, 1000);
-                }
-                setStatus("Connected"); // ধরতেই connected ধরল
-
+                // Caller status
+                setStatus("Calling…");
+                startTimer(); // Caller জন্যও টাইমার start
             } catch (err) {
                 console.error("Call init error:", err);
             }
@@ -99,6 +103,7 @@ export default function CallScreen({
 
         const handleCallAnswer = async ({ answer }) => {
             await peerRef.current.setRemoteDescription(answer);
+            setStatus("Connected"); // Caller স্ক্রিনে connected
         };
 
         const handleIceCandidate = async ({ candidate }) => {
@@ -152,7 +157,6 @@ export default function CallScreen({
     return (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center text-white">
             <div className="bg-gray-900 p-6 rounded-xl w-80 text-center">
-
                 <img
                     src={user?.image || "/avatar.png"}
                     alt={user?.username || "User"}
