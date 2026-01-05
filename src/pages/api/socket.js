@@ -59,7 +59,7 @@ export default function handler(req, res) {
             });
 
 
-            // 📞 CALL EVENTS
+            //  CALL EVENTS
             socket.on("call-user", ({ from, to, type }) => {
                 io.to(to).emit("incoming-call", { from, type });
             });

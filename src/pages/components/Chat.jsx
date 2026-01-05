@@ -133,7 +133,11 @@ export default function Chat() {
 
             socketRef.current.on("call-accepted", ({ from }) => {
                 setIsCalling(true);
+                if (callType === "audio") {
+                    setIsAudio(true);
+                }
             });
+
 
             socketRef.current.on("call-rejected", () => {
                 setIsCalling(false);
@@ -789,6 +793,7 @@ export default function Chat() {
                                 onClick={() => {
                                     setCallType("audio");
                                     setIsCalling(true);
+                                    setIsAudio(true); // 🔥 THIS WAS MISSING
 
                                     socketRef.current.emit("call-user", {
                                         from: user._id,
@@ -799,6 +804,7 @@ export default function Chat() {
                             >
                                 <IoCall className="text-2xl" />
                             </button>
+
 
 
                             <button className="cursor-pointer size-9 bg-red-600 flex items-center -mt-3 justify-center rounded-full text-white">
@@ -964,11 +970,13 @@ export default function Chat() {
                 {isAudio && (
                     <CallScreen
                         user={chatUser}
+                        socketRef={socketRef}   // 🔥 THIS WAS MISSING
                         setIsAudio={setIsAudio}
                         callType="audio"
                         onEnd={() => setIsCalling(false)}
                     />
                 )}
+
 
                 {incomingCall && (
                     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
@@ -992,9 +1000,13 @@ export default function Chat() {
                                             from: user._id,
                                             to: incomingCall.from
                                         });
+
+                                        setCallType("audio");
+                                        setIsAudio(true); // 🔥 REQUIRED
                                         setIsCalling(true);
                                         setIncomingCall(null);
                                     }}
+
                                 >
                                     Accept
                                 </button>
