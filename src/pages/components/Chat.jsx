@@ -702,7 +702,7 @@ export default function Chat() {
                                         <div className="absolute -bottom-1 -right-1">
                                             {onlineUsers.includes(conv.userId)
                                                 ? (
-                                                    <span className="w-2 h-2 bg-green-600 rounded-full">Active</span>
+                                                    <span className="inline-block w-2 h-2 bg-green-600 rounded-full"></span>
                                                 )
                                                 : (
                                                     <span className=" bg-green-600 text-[10px] rounded-full px-1 text-white">

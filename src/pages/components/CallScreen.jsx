@@ -15,17 +15,10 @@ export default function CallScreen({ user, socketRef, setIsAudio, onEnd }) {
 
     if (!user) return null;
 
-    // 🟢 Start timer function
-    const startTimer = () => {
-        if (!timerRef.current) {
-            timerRef.current = setInterval(() => setCallTime(prev => prev + 1), 1000);
-        }
-    };
-
+    // Init peer connection & local stream
     useEffect(() => {
         const init = async () => {
             try {
-                // Local audio
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 localStreamRef.current = stream;
 
@@ -36,26 +29,25 @@ export default function CallScreen({ user, socketRef, setIsAudio, onEnd }) {
                 // Add local tracks
                 stream.getTracks().forEach(track => peerRef.current.addTrack(track, stream));
 
-                // Remote track
+                // Caller + Receiver remote track handle
                 peerRef.current.ontrack = (e) => {
                     if (remoteAudioRef.current) {
                         remoteAudioRef.current.srcObject = e.streams[0];
                         setStatus("Connected");
-                        startTimer(); // Remote stream আসলে টাইমার start
+
+                        if (!timerRef.current) {
+                            timerRef.current = setInterval(() => setCallTime(prev => prev + 1), 1000);
+                        }
                     }
                 };
 
-                // ICE candidate
                 peerRef.current.onicecandidate = (e) => {
                     if (e.candidate && socketRef.current) {
-                        socketRef.current.emit("ice-candidate", {
-                            to: user.userId,
-                            candidate: e.candidate
-                        });
+                        socketRef.current.emit("ice-candidate", { to: user.userId, candidate: e.candidate });
                     }
                 };
 
-                // Create offer
+                // Caller sends offer
                 const offer = await peerRef.current.createOffer();
                 await peerRef.current.setLocalDescription(offer);
 
@@ -65,9 +57,6 @@ export default function CallScreen({ user, socketRef, setIsAudio, onEnd }) {
                     offer
                 });
 
-                // Caller status
-                setStatus("Calling…");
-                startTimer(); // Caller জন্যও টাইমার start
             } catch (err) {
                 console.error("Call init error:", err);
             }
@@ -103,7 +92,11 @@ export default function CallScreen({ user, socketRef, setIsAudio, onEnd }) {
 
         const handleCallAnswer = async ({ answer }) => {
             await peerRef.current.setRemoteDescription(answer);
-            setStatus("Connected"); // Caller স্ক্রিনে connected
+            setStatus("Connected");
+
+            if (!timerRef.current) {
+                timerRef.current = setInterval(() => setCallTime(prev => prev + 1), 1000);
+            }
         };
 
         const handleIceCandidate = async ({ candidate }) => {
@@ -132,10 +125,8 @@ export default function CallScreen({ user, socketRef, setIsAudio, onEnd }) {
     const toggleMic = () => {
         if (localStreamRef.current) {
             const track = localStreamRef.current.getAudioTracks()[0];
-            if (track) {
-                track.enabled = !micOn;
-                setMicOn(!micOn);
-            }
+            if (track) track.enabled = !micOn;
+            setMicOn(!micOn);
         }
     };
 
@@ -157,26 +148,18 @@ export default function CallScreen({ user, socketRef, setIsAudio, onEnd }) {
     return (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center text-white">
             <div className="bg-gray-900 p-6 rounded-xl w-80 text-center">
-                <img
-                    src={user?.image || "/avatar.png"}
-                    alt={user?.username || "User"}
-                    className="w-24 h-24 rounded-full mx-auto"
-                />
-
+                <img src={user?.image || "/avatar.png"} alt={user?.username || "User"} className="w-24 h-24 rounded-full mx-auto" />
                 <h2 className="mt-3 font-semibold">{user?.username || "Unknown"}</h2>
                 <p className="text-sm text-gray-400">
                     {status} {status === "Connected" && `| ${formatTime(callTime)}`}
                 </p>
-
                 <div className="flex justify-center gap-6 mt-6">
                     <button
                         onClick={toggleMic}
-                        className={`w-12 h-12 rounded-full flex items-center justify-center 
-                        ${micOn ? "bg-gray-700" : "bg-red-600"}`}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center ${micOn ? "bg-gray-700" : "bg-red-600"}`}
                     >
                         {micOn ? <FaMicrophone /> : <FaMicrophoneSlash />}
                     </button>
-
                     <button
                         onClick={endCall}
                         className="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center"
@@ -185,7 +168,6 @@ export default function CallScreen({ user, socketRef, setIsAudio, onEnd }) {
                     </button>
                 </div>
             </div>
-
             <audio ref={remoteAudioRef} autoPlay playsInline volume={1.0} />
         </div>
     );
