@@ -366,11 +366,13 @@ export default function Chat() {
             const isChatOpen =
                 chatUser?.userId === otherUserId;
 
+            const userInfo = allUser.find(u => u._id === otherUserId);
+
             const newEntry = {
                 _id: msg.conversationId || old?._id || Date.now(),
                 userId: otherUserId,
-                username: old?.username || "Loading...",
-                image: old?.image || "/avatar.png",
+                username: old?.username || userInfo?.username || "Loading...",
+                image: old?.image || userInfo?.image || "/avatar.png",
                 participants: [msg.senderId, msg.receiverId],
                 lastMessage: msg.text || "📷 Image",
                 lastMessageAt: msg.createdAt,
@@ -382,6 +384,7 @@ export default function Chat() {
                             ? 0
                             : (old?.unread || 0) + 1
             };
+
 
             const filtered = prev.filter(h => h.userId !== otherUserId);
             return [newEntry, ...filtered];
