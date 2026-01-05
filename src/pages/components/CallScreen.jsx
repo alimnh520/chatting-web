@@ -16,44 +16,51 @@ export default function CallScreen({
     const [micOn, setMicOn] = useState(true);
     const [status, setStatus] = useState("Ringing…");
 
+    // ❌ Server-side safety: user না থাকলে কিছু render হবে না
+    if (!user) return null;
 
     useEffect(() => {
-        if (!user) return null;
         const init = async () => {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            localStreamRef.current = stream;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                localStreamRef.current = stream;
 
-            peerRef.current = new RTCPeerConnection({
-                iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-            });
+                peerRef.current = new RTCPeerConnection({
+                    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+                });
 
-            stream.getTracks().forEach(track =>
-                peerRef.current.addTrack(track, stream)
-            );
+                stream.getTracks().forEach(track =>
+                    peerRef.current.addTrack(track, stream)
+                );
 
-            peerRef.current.ontrack = (e) => {
-                remoteAudioRef.current.srcObject = e.streams[0];
-                setStatus("Connected");
-            };
+                peerRef.current.ontrack = (e) => {
+                    if (remoteAudioRef.current) {
+                        remoteAudioRef.current.srcObject = e.streams[0];
+                        setStatus("Connected");
+                    }
+                };
 
-            peerRef.current.onicecandidate = (e) => {
-                if (e.candidate) {
-                    socketRef.current.emit("ice-candidate", {
-                        to: user.userId,
-                        candidate: e.candidate
-                    });
-                }
-            };
+                peerRef.current.onicecandidate = (e) => {
+                    if (e.candidate && socketRef.current) {
+                        socketRef.current.emit("ice-candidate", {
+                            to: user.userId,
+                            candidate: e.candidate
+                        });
+                    }
+                };
 
-            // 🔥 নতুন কোড: call-offer emit
-            const offer = await peerRef.current.createOffer();
-            await peerRef.current.setLocalDescription(offer);
+                // 🔥 call-offer emit
+                const offer = await peerRef.current.createOffer();
+                await peerRef.current.setLocalDescription(offer);
 
-            socketRef.current.emit("call-offer", {
-                to: user.userId,
-                from: user._id,  // বা যে ইউজার কল করছে
-                offer
-            });
+                socketRef.current?.emit("call-offer", {
+                    to: user.userId,
+                    from: user._id,
+                    offer
+                });
+            } catch (err) {
+                console.error("Call init error:", err);
+            }
         };
 
         init();
@@ -62,66 +69,78 @@ export default function CallScreen({
             localStreamRef.current?.getTracks().forEach(t => t.stop());
             peerRef.current?.close();
         };
-    }, []);
-
+    }, [socketRef, user]);
 
     // 🔹 Socket signalling
     useEffect(() => {
-        socketRef.current.on("call-offer", async ({ offer, from }) => {
-            await peerRef.current.setRemoteDescription(offer);
+        if (!socketRef.current) return;
 
+        const handleCallOffer = async ({ offer, from }) => {
+            await peerRef.current.setRemoteDescription(offer);
             const answer = await peerRef.current.createAnswer();
             await peerRef.current.setLocalDescription(answer);
+            socketRef.current.emit("call-answer", { to: from, answer });
+        };
 
-            socketRef.current.emit("call-answer", {
-                to: from,
-                answer
-            });
-        });
-
-        socketRef.current.on("call-answer", async ({ answer }) => {
+        const handleCallAnswer = async ({ answer }) => {
             await peerRef.current.setRemoteDescription(answer);
-        });
+        };
 
-        socketRef.current.on("ice-candidate", async ({ candidate }) => {
+        const handleIceCandidate = async ({ candidate }) => {
             await peerRef.current.addIceCandidate(candidate);
-        });
+        };
 
-        socketRef.current.on("call-ended", endCall);
+        const handleCallEnded = () => {
+            setIsAudio(false);
+            onEnd();
+        };
+
+        socketRef.current.on("call-offer", handleCallOffer);
+        socketRef.current.on("call-answer", handleCallAnswer);
+        socketRef.current.on("ice-candidate", handleIceCandidate);
+        socketRef.current.on("call-ended", handleCallEnded);
 
         return () => {
-            socketRef.current.off("call-offer");
-            socketRef.current.off("call-answer");
-            socketRef.current.off("ice-candidate");
-            socketRef.current.off("call-ended");
+            socketRef.current.off("call-offer", handleCallOffer);
+            socketRef.current.off("call-answer", handleCallAnswer);
+            socketRef.current.off("ice-candidate", handleIceCandidate);
+            socketRef.current.off("call-ended", handleCallEnded);
         };
-    }, []);
+    }, [socketRef, onEnd]);
+
+    const toggleMic = () => {
+        if (localStreamRef.current) {
+            const track = localStreamRef.current.getAudioTracks()[0];
+            if (track) {
+                track.enabled = !micOn;
+                setMicOn(!micOn);
+            }
+        }
+    };
 
     const endCall = () => {
+        socketRef.current?.emit("end-call", { to: user.userId });
         setIsAudio(false);
         onEnd();
     };
-
 
     return (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center text-white">
             <div className="bg-gray-900 p-6 rounded-xl w-80 text-center">
 
+                {/* optional chaining + fallback image */}
                 <img
-                    src={user.image}
+                    src={user?.image || "/avatar.png"}
+                    alt={user?.username || "User"}
                     className="w-24 h-24 rounded-full mx-auto"
                 />
 
-                <h2 className="mt-3 font-semibold">{user.username}</h2>
+                <h2 className="mt-3 font-semibold">{user?.username || "Unknown"}</h2>
                 <p className="text-sm text-gray-400">{status}</p>
 
                 <div className="flex justify-center gap-6 mt-6">
                     <button
-                        onClick={() => {
-                            localStreamRef.current
-                                .getAudioTracks()[0].enabled = !micOn;
-                            setMicOn(!micOn);
-                        }}
+                        onClick={toggleMic}
                         className={`w-12 h-12 rounded-full flex items-center justify-center 
                         ${micOn ? "bg-gray-700" : "bg-red-600"}`}
                     >
@@ -129,12 +148,7 @@ export default function CallScreen({
                     </button>
 
                     <button
-                        onClick={() => {
-                            socketRef.current.emit("end-call", {
-                                to: user.userId
-                            });
-                            endCall();
-                        }}
+                        onClick={endCall}
                         className="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center"
                     >
                         <FaPhoneSlash />
