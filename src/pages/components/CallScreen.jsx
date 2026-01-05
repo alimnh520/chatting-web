@@ -4,10 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { FaPhoneSlash, FaMicrophone, FaMicrophoneSlash } from "react-icons/fa";
 
 export default function CallScreen({
-    user,          // যাকে কল করা হচ্ছে
-    socketRef,
-    setIsAudio,
-    onEnd
+    user, socketRef, setIsAudio, onEnd
 }) {
     const peerRef = useRef(null);
     const localStreamRef = useRef(null);
@@ -15,12 +12,11 @@ export default function CallScreen({
 
     const [micOn, setMicOn] = useState(true);
     const [status, setStatus] = useState("Ringing…");
-    const [callTime, setCallTime] = useState(0); // ⏱ টাইমার seconds
+    const [callTime, setCallTime] = useState(0);
     const timerRef = useRef(null);
 
     if (!user) return null;
 
-    // 🟢 Call init
     useEffect(() => {
         const init = async () => {
             try {
@@ -39,13 +35,6 @@ export default function CallScreen({
                     if (remoteAudioRef.current) {
                         remoteAudioRef.current.srcObject = e.streams[0];
                         setStatus("Connected");
-
-                        // ✅ কল কানেক্ট হলে টাইমার শুরু
-                        if (!timerRef.current) {
-                            timerRef.current = setInterval(() => {
-                                setCallTime(prev => prev + 1);
-                            }, 1000);
-                        }
                     }
                 };
 
@@ -66,6 +55,15 @@ export default function CallScreen({
                     from: user._id,
                     offer
                 });
+
+                // ✅ কল ধরার সাথে সাথে টাইমার start
+                if (!timerRef.current) {
+                    timerRef.current = setInterval(() => {
+                        setCallTime(prev => prev + 1);
+                    }, 1000);
+                }
+                setStatus("Connected"); // ধরতেই connected ধরল
+
             } catch (err) {
                 console.error("Call init error:", err);
             }
@@ -76,11 +74,11 @@ export default function CallScreen({
         return () => {
             localStreamRef.current?.getTracks().forEach(t => t.stop());
             peerRef.current?.close();
-            clearInterval(timerRef.current); // টাইমার বন্ধ
+            clearInterval(timerRef.current);
         };
     }, [socketRef, user]);
 
-    // 🟢 Audio autoplay
+    // Audio autoplay
     useEffect(() => {
         if (remoteAudioRef.current) {
             remoteAudioRef.current.autoplay = true;
@@ -88,7 +86,7 @@ export default function CallScreen({
         }
     }, []);
 
-    // 🟢 Socket signalling
+    // Socket events
     useEffect(() => {
         if (!socketRef.current) return;
 
@@ -108,7 +106,7 @@ export default function CallScreen({
         };
 
         const handleCallEnded = () => {
-            clearInterval(timerRef.current); // টাইমার বন্ধ
+            clearInterval(timerRef.current);
             setIsAudio(false);
             onEnd();
         };
@@ -140,12 +138,11 @@ export default function CallScreen({
         socketRef.current?.emit("end-call", { to: user.userId });
         localStreamRef.current?.getTracks().forEach(t => t.stop());
         peerRef.current?.close();
-        clearInterval(timerRef.current); // টাইমার বন্ধ
+        clearInterval(timerRef.current);
         setIsAudio(false);
         onEnd();
     };
 
-    // ⏱ Call time formatted
     const formatTime = (sec) => {
         const m = Math.floor(sec / 60).toString().padStart(2, "0");
         const s = (sec % 60).toString().padStart(2, "0");
