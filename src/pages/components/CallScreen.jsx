@@ -3,139 +3,172 @@
 import { useEffect, useRef, useState } from "react";
 import { FaPhoneSlash, FaMicrophone, FaMicrophoneSlash } from "react-icons/fa";
 
-export default function CallScreen({ user, socketRef, setIsAudio, onEnd, isCaller }) {
+export default function CallScreen({ user, socketRef, setIsAudio, onEnd }) {
     const peerRef = useRef(null);
     const localStreamRef = useRef(null);
     const remoteAudioRef = useRef(null);
-    const timerRef = useRef(null);
 
     const [micOn, setMicOn] = useState(true);
     const [status, setStatus] = useState("Ringing…");
     const [callTime, setCallTime] = useState(0);
+    const timerRef = useRef(null);
 
-    const startTimer = () => {
-        if (!timerRef.current) {
-            timerRef.current = setInterval(() => {
-                setCallTime(t => t + 1);
-            }, 1000);
-        }
-    };
+    if (!user) return null;
 
-    // 🔹 Create peer + local stream (both sides)
+    // Init peer connection & local stream
     useEffect(() => {
         const init = async () => {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            localStreamRef.current = stream;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                localStreamRef.current = stream;
 
-            const pc = new RTCPeerConnection({
-                iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-            });
+                peerRef.current = new RTCPeerConnection({
+                    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+                });
 
-            peerRef.current = pc;
+                // Add local tracks
+                stream.getTracks().forEach(track => peerRef.current.addTrack(track, stream));
 
-            stream.getTracks().forEach(track => pc.addTrack(track, stream));
+                // Caller + Receiver remote track handle
+                peerRef.current.ontrack = (e) => {
+                    if (remoteAudioRef.current) {
+                        remoteAudioRef.current.srcObject = e.streams[0];
+                        setStatus("Connected");
 
-            pc.ontrack = (e) => {
-                remoteAudioRef.current.srcObject = e.streams[0];
-                setStatus("Connected");
-                startTimer();
-            };
+                        if (!timerRef.current) {
+                            timerRef.current = setInterval(() => setCallTime(prev => prev + 1), 1000);
+                        }
+                    }
+                };
 
-            pc.onicecandidate = (e) => {
-                if (e.candidate) {
-                    socketRef.current.emit("ice-candidate", {
-                        to: user.userId,
-                        candidate: e.candidate
-                    });
-                }
-            };
+                peerRef.current.onicecandidate = (e) => {
+                    if (e.candidate && socketRef.current) {
+                        socketRef.current.emit("ice-candidate", { to: user.userId, candidate: e.candidate });
+                    }
+                };
 
-            // ✅ ONLY caller creates offer
-            if (isCaller) {
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
-                socketRef.current.emit("call-offer", {
+                // Caller sends offer
+                const offer = await peerRef.current.createOffer();
+                await peerRef.current.setLocalDescription(offer);
+
+                socketRef.current?.emit("call-offer", {
                     to: user.userId,
                     from: user._id,
                     offer
                 });
+
+            } catch (err) {
+                console.error("Call init error:", err);
             }
         };
 
         init();
 
         return () => {
-            peerRef.current?.close();
             localStreamRef.current?.getTracks().forEach(t => t.stop());
+            peerRef.current?.close();
             clearInterval(timerRef.current);
         };
+    }, [socketRef, user]);
+
+    // Audio autoplay
+    useEffect(() => {
+        if (remoteAudioRef.current) {
+            remoteAudioRef.current.autoplay = true;
+            remoteAudioRef.current.volume = 1.0;
+        }
     }, []);
 
-    // 🔹 Signaling
+    // Socket events
     useEffect(() => {
-        const socket = socketRef.current;
+        if (!socketRef.current) return;
 
-        socket.on("call-offer", async ({ offer, from }) => {
+        const handleCallOffer = async ({ offer, from }) => {
             await peerRef.current.setRemoteDescription(offer);
             const answer = await peerRef.current.createAnswer();
             await peerRef.current.setLocalDescription(answer);
-            socket.emit("call-answer", { to: from, answer });
-        });
+            socketRef.current.emit("call-answer", { to: from, answer });
+        };
 
-        socket.on("call-answer", async ({ answer }) => {
+        const handleCallAnswer = async ({ answer }) => {
             await peerRef.current.setRemoteDescription(answer);
             setStatus("Connected");
-            startTimer();
-        });
 
-        socket.on("ice-candidate", ({ candidate }) => {
-            peerRef.current.addIceCandidate(candidate);
-        });
+            if (!timerRef.current) {
+                timerRef.current = setInterval(() => setCallTime(prev => prev + 1), 1000);
+            }
+        };
 
-        socket.on("call-ended", () => {
+        const handleIceCandidate = async ({ candidate }) => {
+            await peerRef.current.addIceCandidate(candidate);
+        };
+
+        const handleCallEnded = () => {
+            clearInterval(timerRef.current);
             setIsAudio(false);
             onEnd();
-        });
+        };
+
+        socketRef.current.on("call-offer", handleCallOffer);
+        socketRef.current.on("call-answer", handleCallAnswer);
+        socketRef.current.on("ice-candidate", handleIceCandidate);
+        socketRef.current.on("call-ended", handleCallEnded);
 
         return () => {
-            socket.off("call-offer");
-            socket.off("call-answer");
-            socket.off("ice-candidate");
-            socket.off("call-ended");
+            socketRef.current.off("call-offer", handleCallOffer);
+            socketRef.current.off("call-answer", handleCallAnswer);
+            socketRef.current.off("ice-candidate", handleIceCandidate);
+            socketRef.current.off("call-ended", handleCallEnded);
         };
-    }, []);
+    }, [socketRef, onEnd]);
 
     const toggleMic = () => {
-        const track = localStreamRef.current?.getAudioTracks()[0];
-        if (track) {
-            track.enabled = !micOn;
+        if (localStreamRef.current) {
+            const track = localStreamRef.current.getAudioTracks()[0];
+            if (track) track.enabled = !micOn;
             setMicOn(!micOn);
         }
     };
 
     const endCall = () => {
-        socketRef.current.emit("end-call", { to: user.userId });
+        socketRef.current?.emit("end-call", { to: user.userId });
+        localStreamRef.current?.getTracks().forEach(t => t.stop());
+        peerRef.current?.close();
+        clearInterval(timerRef.current);
         setIsAudio(false);
         onEnd();
     };
 
-    const format = (s) =>
-        `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+    const formatTime = (sec) => {
+        const m = Math.floor(sec / 60).toString().padStart(2, "0");
+        const s = (sec % 60).toString().padStart(2, "0");
+        return `${m}:${s}`;
+    };
 
     return (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center text-white">
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center text-white">
             <div className="bg-gray-900 p-6 rounded-xl w-80 text-center">
-                <h2>{user.username}</h2>
-                <p>{status} {status === "Connected" && format(callTime)}</p>
-
+                <img src={user?.image || "/avatar.png"} alt={user?.username || "User"} className="w-24 h-24 rounded-full mx-auto" />
+                <h2 className="mt-3 font-semibold">{user?.username || "Unknown"}</h2>
+                <p className="text-sm text-gray-400">
+                    {status} {status === "Connected" && `| ${formatTime(callTime)}`}
+                </p>
                 <div className="flex justify-center gap-6 mt-6">
-                    <button onClick={toggleMic}>
+                    <button
+                        onClick={toggleMic}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center ${micOn ? "bg-gray-700" : "bg-red-600"}`}
+                    >
                         {micOn ? <FaMicrophone /> : <FaMicrophoneSlash />}
                     </button>
-                    <button onClick={endCall}><FaPhoneSlash /></button>
+                    <button
+                        onClick={endCall}
+                        className="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center"
+                    >
+                        <FaPhoneSlash />
+                    </button>
                 </div>
             </div>
-            <audio ref={remoteAudioRef} autoPlay />
+            <audio ref={remoteAudioRef} autoPlay playsInline volume={1.0} />
         </div>
     );
 }
