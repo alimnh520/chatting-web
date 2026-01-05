@@ -71,6 +71,14 @@ export default function CallScreen({
         };
     }, [socketRef, user]);
 
+    useEffect(() => {
+        if (remoteAudioRef.current) {
+            remoteAudioRef.current.autoplay = true;
+            remoteAudioRef.current.volume = 1.0;
+        }
+    }, []);
+
+
     // 🔹 Socket signalling
     useEffect(() => {
         if (!socketRef.current) return;
@@ -119,10 +127,15 @@ export default function CallScreen({
     };
 
     const endCall = () => {
-        socketRef.current?.emit("end-call", { to: user.userId });
+        socketRef.current?.emit("call-ended", {
+            to: user.userId, // এখানে receiver ID
+        });
+        localStreamRef.current?.getTracks().forEach(t => t.stop());
+        peerRef.current?.close();
         setIsAudio(false);
         onEnd();
     };
+
 
     return (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center text-white">
@@ -156,7 +169,7 @@ export default function CallScreen({
                 </div>
             </div>
 
-            <audio ref={remoteAudioRef} autoPlay />
+            <audio ref={remoteAudioRef} autoPlay playsInline volume={1.0} />
         </div>
     );
 }

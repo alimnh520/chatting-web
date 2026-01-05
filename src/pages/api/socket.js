@@ -85,6 +85,10 @@ export default function handler(req, res) {
             socket.on("ice-candidate", ({ to, candidate }) => {
                 io.to(to).emit("ice-candidate", { candidate });
             });
+            socket.on("call-ended", ({ to }) => {
+                io.to(to).emit("call-ended");
+            });
+
 
 
 
