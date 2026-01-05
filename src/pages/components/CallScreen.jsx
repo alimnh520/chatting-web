@@ -16,7 +16,9 @@ export default function CallScreen({
     const [micOn, setMicOn] = useState(true);
     const [status, setStatus] = useState("Ringing…");
 
+
     useEffect(() => {
+        if (!user) return null;
         const init = async () => {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             localStreamRef.current = stream;
@@ -42,6 +44,16 @@ export default function CallScreen({
                     });
                 }
             };
+
+            // 🔥 নতুন কোড: call-offer emit
+            const offer = await peerRef.current.createOffer();
+            await peerRef.current.setLocalDescription(offer);
+
+            socketRef.current.emit("call-offer", {
+                to: user.userId,
+                from: user._id,  // বা যে ইউজার কল করছে
+                offer
+            });
         };
 
         init();
@@ -51,6 +63,7 @@ export default function CallScreen({
             peerRef.current?.close();
         };
     }, []);
+
 
     // 🔹 Socket signalling
     useEffect(() => {
@@ -88,6 +101,7 @@ export default function CallScreen({
         setIsAudio(false);
         onEnd();
     };
+
 
     return (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center text-white">

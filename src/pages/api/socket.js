@@ -74,6 +74,18 @@ export default function handler(req, res) {
             socket.on("end-call", ({ from, to }) => {
                 io.to(to).emit("call-ended", { from });
             });
+            socket.on("call-offer", ({ to, offer, from }) => {
+                io.to(to).emit("call-offer", { offer, from });
+            });
+
+            socket.on("call-answer", ({ to, answer }) => {
+                io.to(to).emit("call-answer", { answer });
+            });
+
+            socket.on("ice-candidate", ({ to, candidate }) => {
+                io.to(to).emit("ice-candidate", { candidate });
+            });
+
 
 
             socket.on("disconnect", async () => {
