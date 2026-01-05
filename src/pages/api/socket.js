@@ -71,6 +71,10 @@ export default function handler(req, res) {
             socket.on("reject-call", ({ from, to }) => {
                 io.to(to).emit("call-rejected", { from });
             });
+            socket.on("end-call", ({ from, to }) => {
+                io.to(to).emit("call-ended", { from });
+            });
+
 
             socket.on("disconnect", async () => {
                 const entry = [...onlineUsers.entries()]

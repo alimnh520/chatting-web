@@ -7,9 +7,12 @@ import { ImCross } from "react-icons/im";
 import { FaImage, FaSearchLocation } from "react-icons/fa";
 import Link from "next/link";
 import { FaHeart } from "react-icons/fa";
+import { IoCall } from "react-icons/io5";
+import { IoVideocam } from "react-icons/io5";
 
 import { UserContext } from "../Provider";
 import { io } from "socket.io-client";
+import CallScreen from "./CallScreen";
 
 export default function Chat() {
     const messageCacheRef = useRef({});
@@ -24,8 +27,15 @@ export default function Chat() {
     const [fullView, setFullView] = useState(true);
     const [mobileView, setMobileView] = useState(true);
     const [isMobile, setIsMobile] = useState(false);
-    const [isCalling, setIsCalling] = useState(false);
     const [onlineUsers, setOnlineUsers] = useState([]);
+
+    const [isAudio, setIsAudio] = useState(false);
+    const [isVideo, setIsVideo] = useState(false);
+
+    const [incomingCall, setIncomingCall] = useState(null);
+    const [isCalling, setIsCalling] = useState(false);
+    const [callType, setCallType] = useState(null); // audio | video
+
 
     const [input, setInput] = useState("");
     const [file, setFile] = useState(null);
@@ -111,6 +121,31 @@ export default function Chat() {
             socketRef.current = io({ path: "/api/socket" });
 
             socketRef.current.emit("join", { userId: user._id });
+
+            socketRef.current.on("incoming-call", ({ from, type }) => {
+                const caller = allUser.find(u => u._id === from);
+                setIncomingCall({
+                    from,
+                    user: caller,
+                    type
+                });
+            });
+
+            socketRef.current.on("call-accepted", ({ from }) => {
+                setIsCalling(true);
+            });
+
+            socketRef.current.on("call-rejected", () => {
+                setIsCalling(false);
+                setIncomingCall(null);
+                alert("Call rejected");
+            });
+
+            socketRef.current.on("call-ended", () => {
+                setIsCalling(false);
+                setIncomingCall(null);
+            });
+
 
             socketRef.current.on("receiveMessage", async (msg) => {
                 updateHistoryFromMessage(msg);
@@ -663,10 +698,10 @@ export default function Chat() {
                                         <div className="absolute -bottom-1 -right-1">
                                             {onlineUsers.includes(conv.userId)
                                                 ? (
-                                                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                                    <span className="w-2 h-2 bg-green-600 rounded-full"></span>
                                                 )
                                                 : (
-                                                    <span className=" bg-green-500 text-[10px] rounded-full px-1 text-white">
+                                                    <span className=" bg-green-600 text-[10px] rounded-full px-1 text-white">
                                                         {historyActive(conv.userId)}
                                                     </span>
                                                 )}
@@ -725,10 +760,10 @@ export default function Chat() {
                             }
                         }} />
                         {chatUser && (
-                            <>
+                            <div className="flex items-center justify-center">
                                 <img src={chatUser.image} className="h-10 w-10 rounded-full object-cover" />
                                 <div>
-                                    <p className="font-semibold">{chatUser.username}</p>
+                                    <p className="font-semibold w-30 truncate">{chatUser.username}</p>
                                     <p className="text-xs text-gray-500">
                                         {onlineUsers.includes(chatUser.userId)
                                             ? (
@@ -744,12 +779,36 @@ export default function Chat() {
                                             )}
                                     </p>
                                 </div>
-                            </>
+                            </div>
                         )}
 
-                        <Link href={`/components/location/${chatUser?.userId}`} className="cursor-pointer self-end ml-auto ">
-                            <FaSearchLocation className="text-gray-600 text-4xl hover:text-indigo-500" />
-                        </Link>
+                        <div className="flex items-center justify-center gap-x-5 self-end ml-auto">
+
+                            <button
+                                className="cursor-pointer size-9 bg-red-600 flex items-center justify-center rounded-full text-white"
+                                onClick={() => {
+                                    setCallType("audio");
+                                    setIsCalling(true);
+
+                                    socketRef.current.emit("call-user", {
+                                        from: user._id,
+                                        to: chatUser.userId,
+                                        type: "audio"
+                                    });
+                                }}
+                            >
+                                <IoCall className="text-2xl" />
+                            </button>
+
+
+                            <button className="cursor-pointer size-9 bg-red-600 flex items-center -mt-3 justify-center rounded-full text-white">
+                                <IoVideocam className=" text-2xl hover:text-green-600" />
+                            </button>
+
+                            {/* <Link href={`/components/location/${chatUser?.userId}`} className="cursor-pointer size-10 bg-red-600 flex items-center justify-center rounded-full text-white">
+                                <FaSearchLocation className=" text-2xl hover:text-green-600" />
+                            </Link> */}
+                        </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-4 pl-2 scrollbar" ref={scrollRef}>
@@ -896,21 +955,67 @@ export default function Chat() {
                                     </button>
                                 )}
 
-
-
                             </div>
                         </div>
                     </div>
 
                 </main>)}
 
-                {isCalling && (
+                {isAudio && (
                     <CallScreen
                         user={chatUser}
+                        setIsAudio={setIsAudio}
                         callType="audio"
                         onEnd={() => setIsCalling(false)}
                     />
                 )}
+
+                {incomingCall && (
+                    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
+                        <div className="bg-white rounded-xl p-6 text-center">
+                            <img
+                                src={incomingCall.user?.image}
+                                className="w-20 h-20 rounded-full mx-auto"
+                            />
+                            <h3 className="mt-3 font-semibold">
+                                {incomingCall.user?.username}
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                                Incoming audio call…
+                            </p>
+
+                            <div className="flex gap-4 mt-4">
+                                <button
+                                    className="bg-green-600 text-white px-4 py-2 rounded-lg"
+                                    onClick={() => {
+                                        socketRef.current.emit("accept-call", {
+                                            from: user._id,
+                                            to: incomingCall.from
+                                        });
+                                        setIsCalling(true);
+                                        setIncomingCall(null);
+                                    }}
+                                >
+                                    Accept
+                                </button>
+
+                                <button
+                                    className="bg-red-600 text-white px-4 py-2 rounded-lg"
+                                    onClick={() => {
+                                        socketRef.current.emit("reject-call", {
+                                            from: user._id,
+                                            to: incomingCall.from
+                                        });
+                                        setIncomingCall(null);
+                                    }}
+                                >
+                                    Reject
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
 
 
 

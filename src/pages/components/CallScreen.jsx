@@ -6,7 +6,8 @@ import { useState } from "react";
 export default function CallScreen({
     user,
     callType = "audio", // "audio" | "video"
-    onEnd
+    onEnd,
+    setIsAudio
 }) {
     const [micOn, setMicOn] = useState(true);
     const [videoOn, setVideoOn] = useState(callType === "video");
@@ -54,10 +55,15 @@ export default function CallScreen({
                         {micOn ? <FaMicrophone size={20} /> : <FaMicrophoneSlash size={20} />}
                     </button>
 
-                    {/* End Call */}
                     <button
-                        onClick={onEnd}
-                        className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center shadow-lg"
+                        onClick={() => {
+                            socketRef.current.emit("end-call", {
+                                from: user._id,
+                                to: user.userId
+                            });
+                            setIsAudio(false);
+                        }}
+                        className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center"
                     >
                         <FaPhoneSlash size={24} />
                     </button>
