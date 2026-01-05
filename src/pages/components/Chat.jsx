@@ -6,6 +6,7 @@ import { IoIosArrowBack } from "react-icons/io";
 import { ImCross } from "react-icons/im";
 import { FaImage, FaSearchLocation } from "react-icons/fa";
 import Link from "next/link";
+import { FaHeart } from "react-icons/fa";
 
 import { UserContext } from "../Provider";
 import { io } from "socket.io-client";
@@ -365,9 +366,11 @@ export default function Chat() {
     }, [allUser]);
 
 
-    const handleSendMessage = async () => {
+    const handleSendMessage = async (customText = null) => {
         if (!user?._id) return;
-        if (!input && !file) return;
+
+        const messageText = customText ?? input;
+        if (!messageText && !file) return;
 
         if (file) {
             const MAX_SIZE = 20 * 1024 * 1024;
@@ -425,7 +428,7 @@ export default function Chat() {
                 body: JSON.stringify({
                     senderId: user._id,
                     receiverId: chatUser?.userId,
-                    text: input || null,
+                    text: messageText,
                     file_url,
                     file_id
                 }),
@@ -651,7 +654,6 @@ export default function Chat() {
                                     }}
                                 >
 
-
                                     <div className="relative h-11 w-11">
                                         <img
                                             src={conv.image}
@@ -868,23 +870,33 @@ export default function Chat() {
                                 <label htmlFor="fileInput" className="cursor-pointer self-center flex items-center justify-center">
                                     <FaImage className="text-gray-600 text-3xl hover:text-indigo-500" />
                                 </label>
-                                <button
-                                    className={`inline-flex h-9 items-center justify-center rounded-xl px-4 text-sm font-semibold text-white
+                                {input || file ? (
+                                    <button
+                                        className={`inline-flex h-9 items-center justify-center rounded-xl px-4 text-sm font-semibold text-white
         ${isUploading || isLoading ? 'pointer-events-none' : 'pointer-events-auto'}
-        ${input || file ? 'bg-indigo-700' : 'bg-indigo-500 pointer-events-none'}
-    `}
-                                    onClick={() => {
-                                        inputRef.current?.focus({ preventScroll: true });
-                                        handleSendMessage();
-                                    }}
-                                    disabled={isUploading || isLoading}
-                                >
-                                    {isUploading
-                                        ? "Uploading..."
-                                        : isLoading
-                                            ? "Sending..."
-                                            : "Send"}
-                                </button>
+        bg-indigo-700`}
+                                        onClick={() => {
+                                            inputRef.current?.focus({ preventScroll: true });
+                                            handleSendMessage();
+                                        }}
+                                        disabled={isUploading || isLoading}
+                                    >
+                                        {isUploading
+                                            ? "Uploading..."
+                                            : isLoading
+                                                ? "Sending..."
+                                                : "Send"}
+                                    </button>
+                                ) : (
+                                    <button
+                                        className="text-red-600 inline-flex h-9 text-2xl ml-2 cursor-pointer items-center justify-center"
+                                        onClick={() => handleSendMessage("❤️")}
+                                    >
+                                        <FaHeart />
+                                    </button>
+                                )}
+
+
 
                             </div>
                         </div>
