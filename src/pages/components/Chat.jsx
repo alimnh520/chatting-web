@@ -970,9 +970,8 @@ export default function Chat() {
                 {isAudio && (
                     <CallScreen
                         user={chatUser}
-                        socketRef={socketRef}   // 🔥 THIS WAS MISSING
+                        socketRef={socketRef}
                         setIsAudio={setIsAudio}
-                        callType="audio"
                         onEnd={() => setIsCalling(false)}
                     />
                 )}

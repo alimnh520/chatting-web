@@ -1,59 +1,117 @@
 'use client';
 
-import { FaPhoneSlash, FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash } from "react-icons/fa";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { FaPhoneSlash, FaMicrophone, FaMicrophoneSlash } from "react-icons/fa";
 
 export default function CallScreen({
-    user,
+    user,          // যাকে কল করা হচ্ছে
     socketRef,
     setIsAudio,
-    callType,
     onEnd
 }) {
+    const peerRef = useRef(null);
+    const localStreamRef = useRef(null);
+    const remoteAudioRef = useRef(null);
+
     const [micOn, setMicOn] = useState(true);
-    const [videoOn, setVideoOn] = useState(callType === "video");
+    const [status, setStatus] = useState("Ringing…");
+
+    useEffect(() => {
+        const init = async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            localStreamRef.current = stream;
+
+            peerRef.current = new RTCPeerConnection({
+                iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+            });
+
+            stream.getTracks().forEach(track =>
+                peerRef.current.addTrack(track, stream)
+            );
+
+            peerRef.current.ontrack = (e) => {
+                remoteAudioRef.current.srcObject = e.streams[0];
+                setStatus("Connected");
+            };
+
+            peerRef.current.onicecandidate = (e) => {
+                if (e.candidate) {
+                    socketRef.current.emit("ice-candidate", {
+                        to: user.userId,
+                        candidate: e.candidate
+                    });
+                }
+            };
+        };
+
+        init();
+
+        return () => {
+            localStreamRef.current?.getTracks().forEach(t => t.stop());
+            peerRef.current?.close();
+        };
+    }, []);
+
+    // 🔹 Socket signalling
+    useEffect(() => {
+        socketRef.current.on("call-offer", async ({ offer, from }) => {
+            await peerRef.current.setRemoteDescription(offer);
+
+            const answer = await peerRef.current.createAnswer();
+            await peerRef.current.setLocalDescription(answer);
+
+            socketRef.current.emit("call-answer", {
+                to: from,
+                answer
+            });
+        });
+
+        socketRef.current.on("call-answer", async ({ answer }) => {
+            await peerRef.current.setRemoteDescription(answer);
+        });
+
+        socketRef.current.on("ice-candidate", async ({ candidate }) => {
+            await peerRef.current.addIceCandidate(candidate);
+        });
+
+        socketRef.current.on("call-ended", endCall);
+
+        return () => {
+            socketRef.current.off("call-offer");
+            socketRef.current.off("call-answer");
+            socketRef.current.off("ice-candidate");
+            socketRef.current.off("call-ended");
+        };
+    }, []);
+
+    const endCall = () => {
+        setIsAudio(false);
+        onEnd();
+    };
 
     return (
-        <div className="fixed inset-0 z-50 bg-gradient-to-br from-[#0f2027] via-[#203a43] to-[#2c5364] flex items-center justify-center text-white">
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center text-white">
+            <div className="bg-gray-900 p-6 rounded-xl w-80 text-center">
 
-            <div className="w-full max-w-md h-full sm:h-auto sm:rounded-2xl bg-black/40 backdrop-blur-lg flex flex-col items-center justify-between p-6">
+                <img
+                    src={user.image}
+                    className="w-24 h-24 rounded-full mx-auto"
+                />
 
-                {/* User Info */}
-                <div className="flex flex-col items-center mt-10">
-                    <img
-                        src={user?.image}
-                        alt={user?.username}
-                        className="w-28 h-28 rounded-full object-cover border-4 border-white/20"
-                    />
-                    <h2 className="mt-4 text-xl font-semibold">
-                        {user?.username}
-                    </h2>
-                    <p className="text-sm text-gray-300 mt-1">
-                        {callType === "video" ? "Video call" : "Audio call"} • Ringing…
-                    </p>
-                </div>
+                <h2 className="mt-3 font-semibold">{user.username}</h2>
+                <p className="text-sm text-gray-400">{status}</p>
 
-                {/* Video Preview (optional) */}
-                {callType === "video" && (
-                    <div className="w-full h-48 bg-black rounded-xl overflow-hidden mt-6">
-                        <video
-                            className="w-full h-full object-cover"
-                            autoPlay
-                            muted
-                        />
-                    </div>
-                )}
-
-                {/* Controls */}
-                <div className="flex items-center justify-center gap-6 mb-10">
-
-                    {/* Mic */}
+                <div className="flex justify-center gap-6 mt-6">
                     <button
-                        onClick={() => setMicOn(!micOn)}
-                        className={`w-14 h-14 rounded-full flex items-center justify-center 
-                        ${micOn ? "bg-white/20" : "bg-red-600"}`}
+                        onClick={() => {
+                            localStreamRef.current
+                                .getAudioTracks()[0].enabled = !micOn;
+                            setMicOn(!micOn);
+                        }}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center 
+                        ${micOn ? "bg-gray-700" : "bg-red-600"}`}
                     >
-                        {micOn ? <FaMicrophone size={20} /> : <FaMicrophoneSlash size={20} />}
+                        {micOn ? <FaMicrophone /> : <FaMicrophoneSlash />}
                     </button>
 
                     <button
@@ -61,27 +119,16 @@ export default function CallScreen({
                             socketRef.current.emit("end-call", {
                                 to: user.userId
                             });
-
-                            setIsAudio(false);
-                            onEnd();
+                            endCall();
                         }}
-                        className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center"
+                        className="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center"
                     >
-                        <FaPhoneSlash size={24} />
+                        <FaPhoneSlash />
                     </button>
-
-                    {callType === "video" && (
-                        <button
-                            onClick={() => setVideoOn(!videoOn)}
-                            className={`w-14 h-14 rounded-full flex items-center justify-center 
-                            ${videoOn ? "bg-white/20" : "bg-red-600"}`}
-                        >
-                            {videoOn ? <FaVideo size={20} /> : <FaVideoSlash size={20} />}
-                        </button>
-                    )}
                 </div>
-
             </div>
+
+            <audio ref={remoteAudioRef} autoPlay />
         </div>
     );
 }
