@@ -15,10 +15,12 @@ export default function CallScreen({
 
     const [micOn, setMicOn] = useState(true);
     const [status, setStatus] = useState("Ringing…");
+    const [callTime, setCallTime] = useState(0); // ⏱ টাইমার seconds
+    const timerRef = useRef(null);
 
-    // ❌ Server-side safety: user না থাকলে কিছু render হবে না
     if (!user) return null;
 
+    // 🟢 Call init
     useEffect(() => {
         const init = async () => {
             try {
@@ -37,6 +39,13 @@ export default function CallScreen({
                     if (remoteAudioRef.current) {
                         remoteAudioRef.current.srcObject = e.streams[0];
                         setStatus("Connected");
+
+                        // ✅ কল কানেক্ট হলে টাইমার শুরু
+                        if (!timerRef.current) {
+                            timerRef.current = setInterval(() => {
+                                setCallTime(prev => prev + 1);
+                            }, 1000);
+                        }
                     }
                 };
 
@@ -49,7 +58,6 @@ export default function CallScreen({
                     }
                 };
 
-                // 🔥 call-offer emit
                 const offer = await peerRef.current.createOffer();
                 await peerRef.current.setLocalDescription(offer);
 
@@ -68,9 +76,11 @@ export default function CallScreen({
         return () => {
             localStreamRef.current?.getTracks().forEach(t => t.stop());
             peerRef.current?.close();
+            clearInterval(timerRef.current); // টাইমার বন্ধ
         };
     }, [socketRef, user]);
 
+    // 🟢 Audio autoplay
     useEffect(() => {
         if (remoteAudioRef.current) {
             remoteAudioRef.current.autoplay = true;
@@ -78,8 +88,7 @@ export default function CallScreen({
         }
     }, []);
 
-
-    // 🔹 Socket signalling
+    // 🟢 Socket signalling
     useEffect(() => {
         if (!socketRef.current) return;
 
@@ -99,6 +108,7 @@ export default function CallScreen({
         };
 
         const handleCallEnded = () => {
+            clearInterval(timerRef.current); // টাইমার বন্ধ
             setIsAudio(false);
             onEnd();
         };
@@ -127,21 +137,25 @@ export default function CallScreen({
     };
 
     const endCall = () => {
-        socketRef.current?.emit("call-ended", {
-            to: user.userId, // এখানে receiver ID
-        });
+        socketRef.current?.emit("end-call", { to: user.userId });
         localStreamRef.current?.getTracks().forEach(t => t.stop());
         peerRef.current?.close();
+        clearInterval(timerRef.current); // টাইমার বন্ধ
         setIsAudio(false);
         onEnd();
     };
 
+    // ⏱ Call time formatted
+    const formatTime = (sec) => {
+        const m = Math.floor(sec / 60).toString().padStart(2, "0");
+        const s = (sec % 60).toString().padStart(2, "0");
+        return `${m}:${s}`;
+    };
 
     return (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center text-white">
             <div className="bg-gray-900 p-6 rounded-xl w-80 text-center">
 
-                {/* optional chaining + fallback image */}
                 <img
                     src={user?.image || "/avatar.png"}
                     alt={user?.username || "User"}
@@ -149,7 +163,9 @@ export default function CallScreen({
                 />
 
                 <h2 className="mt-3 font-semibold">{user?.username || "Unknown"}</h2>
-                <p className="text-sm text-gray-400">{status}</p>
+                <p className="text-sm text-gray-400">
+                    {status} {status === "Connected" && `| ${formatTime(callTime)}`}
+                </p>
 
                 <div className="flex justify-center gap-6 mt-6">
                     <button

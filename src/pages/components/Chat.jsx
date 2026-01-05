@@ -968,11 +968,12 @@ export default function Chat() {
                 </main>)}
                 {isAudio && user && (
                     <CallScreen
-                        user={user}
+                        user={chatUser}   // remote user
                         socketRef={socketRef}
                         setIsAudio={setIsAudio}
                         onEnd={() => setIsCalling(false)}
                     />
+
                 )}
 
 
