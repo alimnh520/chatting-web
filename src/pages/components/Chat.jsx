@@ -708,7 +708,7 @@ export default function Chat() {
                                                     <span className="inline-block w-2 h-2 bg-green-600 rounded-full"></span>
                                                 )
                                                 : (
-                                                    <span className=" bg-green-600 text-[10px] rounded-full px-1 text-white">
+                                                    <span className={`bg-green-600 text-[10px] ${onlineUsers.includes(conv.userId) === false && 'px-1'} rounded-full text-white`}>
                                                         {historyActive(conv.userId)}
                                                     </span>
                                                 )}
