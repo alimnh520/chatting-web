@@ -703,15 +703,16 @@ export default function Chat() {
                                             className="w-full h-full rounded-full object-center object-cover"
                                         />
                                         <div className="absolute -bottom-1 -right-1">
-                                            {onlineUsers.includes(conv.userId)
-                                                ? (
-                                                    <span className="inline-block w-2 h-2 bg-green-600 rounded-full"></span>
-                                                )
-                                                : (
-                                                    <span className={`bg-green-600 text-[10px] ${onlineUsers.includes(conv.userId) === false && 'px-1'} rounded-full text-white`}>
-                                                        {historyActive(conv.userId)}
-                                                    </span>
-                                                )}
+                                            {onlineUsers.includes(conv.userId) ? (
+                                                <span className="inline-block w-2 h-2 bg-green-600 rounded-full"></span>
+                                            ) : (
+                                                <span
+                                                    className={`bg-green-600 text-[10px] rounded-full text-white inline-flex items-center justify-center ${historyActive(conv.userId) ? "px-1" : ""
+                                                        }`}
+                                                >
+                                                    {historyActive(conv.userId)}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
 
