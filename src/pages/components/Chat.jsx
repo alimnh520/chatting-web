@@ -621,7 +621,7 @@ export default function Chat() {
                                 <div className="absolute top-10 left-0 w-full h-screen" onClick={() => {
                                     if (isSearch) setIsSearch(false);
                                 }}>
-                                    <div className="w-full relative max-h-80 bg-white rounded-2xl shadow-lg border border-gray-200 p-4 overflow-y-auto z-10 scrollbar">
+                                    <div className="w-full relative max-h-80 bg-white rounded-2xl space-y-1.5 shadow-lg border border-gray-200 p-4 overflow-y-auto z-10 scrollbar">
                                         {filteredUsers.map(u => (
                                             <div key={u._id} className="flex bg-gray-200 items-center gap-3 p-2 rounded-xl hover:bg-gray-100 cursor-pointer"
                                                 onClick={() => {
