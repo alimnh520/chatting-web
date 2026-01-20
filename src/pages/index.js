@@ -212,10 +212,11 @@ export default function Chat() {
       file_id = uploadResult.public_id;
     }
 
-    // 1️⃣ Prepare new message
+    // 1️⃣ Prepare new message with temp id
+    let tempId = `temp-${Date.now()}`;
     let newMessage = {
-      _id: Date.now().toString(),
-      conversationId: chatUser?._id || `temp-${Date.now()}`,
+      _id: tempId,
+      conversationId: chatUser?._id || tempId,
       senderId: user._id,
       receiverId: chatUser?.userId,
       text: messageText,
@@ -231,10 +232,7 @@ export default function Chat() {
     setFile(null);
 
     if (!chatUser?._id) {
-      setChatUser(prev => ({
-        ...prev,
-        _id: newMessage.conversationId,
-      }));
+      setChatUser(prev => ({ ...prev, _id: newMessage.conversationId }));
     }
 
     socketRef.current.emit("sendMessage", { message: newMessage });
@@ -249,8 +247,9 @@ export default function Chat() {
 
       if (data.saveMessage) {
         setMessages(prev =>
-          prev.map(m => m._id === newMessage._id ? data.saveMessage : m)
+          prev.map(m => m._id === tempId ? data.saveMessage : m)
         );
+
         updateMessage(data.saveMessage);
 
         if (!chatUser._id) {
