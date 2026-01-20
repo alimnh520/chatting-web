@@ -227,6 +227,8 @@ export default function Chat() {
     try {
       setInput('');
       setFile(null);
+      setMessages(prev => [...prev, newMessage]);
+      updateMessage(newMessage);
       socketRef.current.emit("sendMessage", { message: newMessage });
       const res = await fetch("/api/message/send", {
         method: "POST",
@@ -234,23 +236,6 @@ export default function Chat() {
         body: JSON.stringify({ newMessage }),
       });
       const data = await res.json();
-      let messageToUse;
-      if (chatUser?._id) {
-        messageToUse = newMessage;
-      } else {
-        messageToUse = data.saveMessage;
-      }
-
-      setMessages(prev => [...prev, messageToUse]);
-      updateMessage(messageToUse);
-
-      if (!chatUser?._id) {
-        setChatUser(prev => ({
-          ...prev,
-          _id: messageToUse.conversationId
-        }));
-      }
-
 
     } catch (err) {
       console.error("Send message error:", err);
