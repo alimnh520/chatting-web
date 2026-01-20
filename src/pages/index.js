@@ -227,6 +227,10 @@ export default function Chat() {
       socketRef.current.emit("sendMessage", { message: optimisticMessage });
     }
 
+    setIsLoading(true)
+    setInput("");
+    setFile(null);
+
     try {
       const res = await fetch("/api/message/send", {
         method: "POST",
@@ -234,13 +238,12 @@ export default function Chat() {
         body: JSON.stringify({ newMessage: optimisticMessage }),
       });
 
+
+      setIsLoading(false)
+
       const data = await res.json();
 
       if (data.saveMessage) {
-
-        setInput("");
-        setFile(null);
-
 
         const realMessage = data.saveMessage;
         if (!chatUser?._id) {
@@ -254,7 +257,6 @@ export default function Chat() {
           }));
         }
       }
-
 
     } catch (err) {
       console.error(err);
@@ -299,13 +301,14 @@ export default function Chat() {
 
       setHistory(history);
 
-      if (history.length > 0 && !isMobile) {
+      if (!chatUser && history.length > 0 && !isMobile) {
         setChatUser(history[0]);
       }
+
     };
 
     fetchHistory();
-  }, [allUser, user?._id]);
+  }, [user?._id]);
 
 
   useEffect(() => {
@@ -347,7 +350,6 @@ export default function Chat() {
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
 
-  console.log(chatUser?._id);
 
 
 
