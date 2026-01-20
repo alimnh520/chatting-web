@@ -308,7 +308,7 @@ export default function Chat() {
     };
 
     fetchHistory();
-  }, [user?._id]);
+  }, [allUser, user?._id, chatUser]);
 
 
   useEffect(() => {
