@@ -212,49 +212,55 @@ export default function Chat() {
       file_id = uploadResult.public_id;
     }
 
+    // 1️⃣ Prepare new message
     let newMessage = {
       _id: Date.now().toString(),
-      conversationId: chatUser._id,
+      conversationId: chatUser?._id || `temp-${Date.now()}`,
       senderId: user._id,
-      receiverId: chatUser.userId,
+      receiverId: chatUser?.userId,
       text: messageText,
       file_url,
       file_id,
       seen: false,
       createdAt: new Date(),
+    };
+
+    setMessages(prev => [...prev, newMessage]);
+    updateMessage(newMessage);
+    setInput('');
+    setFile(null);
+
+    if (!chatUser?._id) {
+      setChatUser(prev => ({
+        ...prev,
+        _id: newMessage.conversationId,
+      }));
     }
 
+    socketRef.current.emit("sendMessage", { message: newMessage });
+
     try {
-      setInput('');
-      setFile(null);
-      socketRef.current.emit("sendMessage", { message: newMessage });
       const res = await fetch("/api/message/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newMessage }),
       });
       const data = await res.json();
-      let messageToUse;
-      if (chatUser?._id) {
-        messageToUse = newMessage;
-      } else {
-        messageToUse = data.saveMessage;
+
+      if (data.saveMessage) {
+        setMessages(prev =>
+          prev.map(m => m._id === newMessage._id ? data.saveMessage : m)
+        );
+        updateMessage(data.saveMessage);
+
+        if (!chatUser._id) {
+          setChatUser(prev => ({ ...prev, _id: data.saveMessage.conversationId }));
+        }
       }
-
-      setMessages(prev => [...prev, messageToUse]);
-      updateMessage(messageToUse);
-
-      if (!chatUser?._id) {
-        setChatUser(prev => ({
-          ...prev,
-          _id: messageToUse.conversationId
-        }));
-      }
-
-
     } catch (err) {
-      console.error("Send message error:", err);
+      console.error(err);
     }
+
   };
 
   useEffect(() => {
