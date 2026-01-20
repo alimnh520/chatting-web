@@ -31,7 +31,7 @@ export default async function handler(req, res) {
                 unreadCount: { [receiverId]: 0 },
                 createdAt: new Date(),
             });
-            // await conversation.save();
+            await conversation.save();
         }
 
         const saveMessage = new Message({
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
             seenAt: seen ? new Date() : null,
             createdAt,
         });
-        // await saveMessage.save();
+        await saveMessage.save();
 
         await History.updateOne(
             { _id: conversation._id },

@@ -216,7 +216,7 @@ export default function Chat() {
 
     let newMessage = {
       _id: Date.now().toString(),
-      conversationId: chatUser._id + user._id,
+      conversationId: (chatUser._id + user._id).toString(),
       senderId: user._id,
       receiverId: chatUser._id,
       text: messageText,
@@ -252,7 +252,7 @@ export default function Chat() {
       const res = await fetch('/api/message/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId: chatUser?._id })
+        body: JSON.stringify({ conversationId: chatUser._id + user._id, })
       });
 
       const data = await res.json();
@@ -288,7 +288,7 @@ export default function Chat() {
     };
 
     fetchHistory();
-  }, [user?._id]);
+  }, [allUser, user?._id]);
 
 
   useEffect(() => {
@@ -329,7 +329,10 @@ export default function Chat() {
   const filteredUsers = allUser.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
-  const filterHistory = filteredUsers?.filter(self => self._id !== user?._id)
+  const filterHistory = filteredUsers?.filter(self => self._id !== user?._id);
+
+  console.log(chatUser);
+  
 
 
   return (

@@ -1,5 +1,4 @@
 import Message from "@/models/Message";
-import { ObjectId } from "mongodb";
 
 export default async function handler(req, res) {
     if (req.method === "POST") {
@@ -11,7 +10,7 @@ export default async function handler(req, res) {
             }
 
             const messages = await Message
-                .find({ conversationId: new ObjectId(conversationId) })
+                .find({ conversationId})
                 .sort({ createdAt: 1 })
 
             return res.status(200).json({
