@@ -80,7 +80,7 @@ export default function Chat() {
     const setupSocket = async () => {
       socketRef.current = io({ path: "/api/socket" });
 
-      socketRef.current.emit("join", { _id: user._id });
+      socketRef.current.emit("join", { userId: user._id });
 
       socketRef.current.on("receiveMessage", async (msg) => {
         setMessages(prev => [...prev, msg]);
@@ -104,8 +104,6 @@ export default function Chat() {
 
 
   const updateMessage = (msg) => {
-    socketRef.current.emit("sendMessage", { message: msg });
-
     const isMe = msg.senderId === user._id;
 
     const otherUserId = isMe ? msg.receiverId : msg.senderId;
@@ -234,6 +232,7 @@ export default function Chat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newMessage }),
       });
+      socketRef.current.emit("sendMessage", { message: newMessage });
       updateMessage(newMessage);
       setInput('');
       setFile(null);
@@ -417,7 +416,7 @@ export default function Chat() {
               return (
                 <button
                   key={conv._id}
-                  className={`w-full flex items-center gap-3 border-b border-b-gray-100 px-4 py-3 text-left hover:bg-indigo-50 ${conv.userId === chatUser._id ? "bg-indigo-50" : ""}`}
+                  className={`w-full flex items-center gap-3 border-b border-b-gray-100 px-4 py-3 text-left hover:bg-indigo-50 ${conv.userId === chatUser?._id ? "bg-indigo-50" : ""}`}
                   onClick={() => {
                     let findUser = allUser.find(u => u._id === conv.userId);
                     setChatUser(findUser);
