@@ -210,7 +210,7 @@ export default function Chat() {
     }
 
     const newMessage = {
-      _id: tempId,
+      _id: Date.now().toString(),
       conversationId: chatUser?._id,
       senderId: user._id,
       receiverId: chatUser?.userId,
