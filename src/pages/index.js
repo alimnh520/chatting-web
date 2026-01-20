@@ -227,15 +227,17 @@ export default function Chat() {
     try {
       setInput('');
       setFile(null);
-      setMessages(prev => [...prev, newMessage]);
-      updateMessage(newMessage);
-      socketRef.current.emit("sendMessage", { message: newMessage });
+
       const res = await fetch("/api/message/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newMessage }),
       });
       const data = await res.json();
+
+      setMessages(prev => [{ ...prev, newMessage: data.saveMessage }]);
+      updateMessage({ newMessage: data.saveMessage });
+      socketRef.current.emit("sendMessage", { message: data.saveMessage });
 
     } catch (err) {
       console.error("Send message error:", err);
