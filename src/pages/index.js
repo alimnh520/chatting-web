@@ -155,9 +155,6 @@ export default function Chat() {
   };
 
 
-
-
-
   const handleSendMessage = async (customText = null) => {
 
     const messageText = customText ?? input;
@@ -212,9 +209,9 @@ export default function Chat() {
       file_id = uploadResult.public_id;
     }
 
-    // 1️⃣ Prepare new message with temp id
-    let tempId = `temp-${Date.now()}`;
-    let newMessage = {
+    // temporary message
+    const tempId = `temp-${Date.now()}`;
+    const newMessage = {
       _id: tempId,
       conversationId: chatUser?._id || tempId,
       senderId: user._id,
@@ -247,11 +244,10 @@ export default function Chat() {
 
       if (data.saveMessage) {
         setMessages(prev =>
-          prev.map(m => m._id === tempId ? data.saveMessage : m)
+          prev.map(m => m._id === tempId ? { ...m, ...data.saveMessage } : m)
         );
 
         updateMessage(data.saveMessage);
-
         if (!chatUser._id) {
           setChatUser(prev => ({ ...prev, _id: data.saveMessage.conversationId }));
         }
