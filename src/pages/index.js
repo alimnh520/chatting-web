@@ -105,21 +105,23 @@ export default function Chat() {
 
   const updateMessage = (msg) => {
     const isMe = msg.senderId === user._id;
-
     const otherUserId = isMe ? msg.receiverId : msg.senderId;
-    const otherUser = allUser.find(u => u._id === otherUserId);
 
-    const lastMessageText = msg.text || "📷 Image";
+    const otherUser =
+      allUser.find(u => u._id === otherUserId) ||
+      history.find(h => h.userId === otherUserId);
+
+    const username = otherUser?.username || otherUser?.user?.username || "Unknown";
+    const image = otherUser?.image || otherUser?.user?.image || "/avatar.png";
+    const lastMessageText = msg.text || (msg.file_url ? "📷 Image/Video" : "📷 Image");
 
     setHistory(prev => {
-      const index = prev.findIndex(h =>
-        h.participants.includes(msg.senderId) &&
-        h.participants.includes(msg.receiverId)
+      const index = prev.findIndex(
+        h => h.participants.includes(msg.senderId) && h.participants.includes(msg.receiverId)
       );
 
       if (index !== -1) {
         const updated = [...prev];
-
         const updatedConv = {
           ...updated[index],
           lastMessage: lastMessageText,
@@ -127,15 +129,12 @@ export default function Chat() {
           lastMessageSenderId: msg.senderId,
           unreadCount: {
             ...updated[index].unreadCount,
-            [otherUserId]:
-              isMe
-                ? (updated[index].unreadCount?.[otherUserId] || 0)
-                : (updated[index].unreadCount?.[otherUserId] || 0) + 1
-          }
+            [otherUserId]: isMe
+              ? updated[index].unreadCount?.[otherUserId] || 0
+              : (updated[index].unreadCount?.[otherUserId] || 0) + 1,
+          },
         };
-
         updated.splice(index, 1);
-
         return [updatedConv, ...updated];
       }
 
@@ -144,18 +143,17 @@ export default function Chat() {
         lastMessage: lastMessageText,
         lastMessageAt: new Date(),
         lastMessageSenderId: msg.senderId,
-        userId: otherUser?._id || otherUserId,
-        username: otherUser?.username || "Unknown",
-        image: otherUser?.image || null,
+        userId: otherUserId,
+        username,
+        image,
         lastActiveAt: otherUser?.lastActiveAt || null,
-        unreadCount: {
-          [otherUserId]: isMe ? 0 : 1
-        }
+        unreadCount: { [otherUserId]: isMe ? 0 : 1 },
       };
 
       return [newConv, ...prev];
     });
   };
+
 
 
 
@@ -216,9 +214,9 @@ export default function Chat() {
 
     let newMessage = {
       _id: Date.now().toString(),
-      conversationId: chatUser._id?.toString(),
+      conversationId: chatUser._id,
       senderId: user._id,
-      receiverId: chatUser._id,
+      receiverId: chatUser.userId,
       text: messageText,
       file_url,
       file_id,
@@ -229,14 +227,31 @@ export default function Chat() {
     try {
       setInput('');
       setFile(null);
-      setMessages(prev => [...prev, newMessage]);
-      updateMessage(newMessage);
       socketRef.current.emit("sendMessage", { message: newMessage });
-      await fetch("/api/message/send", {
+      const res = await fetch("/api/message/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newMessage }),
       });
+      const data = await res.json();
+      let messageToUse;
+      if (chatUser?._id) {
+        messageToUse = newMessage;
+      } else {
+        messageToUse = data.saveMessage;
+      }
+
+      setMessages(prev => [...prev, messageToUse]);
+      updateMessage(messageToUse);
+
+      if (!chatUser?._id) {
+        setChatUser(prev => ({
+          ...prev,
+          _id: messageToUse.conversationId
+        }));
+      }
+
+
     } catch (err) {
       console.error("Send message error:", err);
     }
@@ -329,13 +344,13 @@ export default function Chat() {
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
 
+  console.log(history[0]?._id);
+  console.log(chatUser?._id);
 
-  console.log(chatUser);
-  
 
   return (
-    <div className="h-screen w-full bg-gradient-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
-      <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-white sm:bg-gray-400">
+    <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm: p-4 text-black">
+      <div div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-white sm:bg-gray-400" >
         <aside className={` fixed sm:static top-0 left-0 z-20 h-full transform transition-all duration-300 ease-in-out ${mobileView ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0 w-full backdrop-blur ${fullView ? 'sm:w-80' : 'sm:w-0'} ${mobileView ? 'w-full' : 'w-0'} overflow-hidden border-r border-gray-200`}>
           <div className="p-4 pb-2">
             <div className="flex items-center justify-between">
@@ -369,7 +384,22 @@ export default function Chat() {
                       <div key={u._id} className="flex bg-gray-200 items-center gap-3 p-2 rounded-xl hover:bg-gray-100 cursor-pointer"
                         onClick={() => {
                           const findHistory = history.find(h => h.participants.includes(u._id) && h.participants.includes(user._id));
-                          setChatUser(findHistory || u);
+                          if (findHistory) {
+                            setChatUser(findHistory);
+                          } else {
+                            setChatUser({
+                              _id: null,
+                              participants: [user._id, u._id],
+                              userId: u._id,
+                              username: u.username,
+                              image: u.image,
+                              lastActiveAt: u.lastActiveAt,
+                              lastMessage: "",
+                              lastMessageAt: null,
+                              lastMessageSenderId: null,
+                              unreadCount: {}
+                            });
+                          }
                           setMobileView(false);
                           setIsSearch(false);
                         }}
@@ -414,10 +444,26 @@ export default function Chat() {
               return (
                 <button
                   key={conv._id}
-                  className={`w-full flex items-center gap-3 border-b border-b-gray-100 px-4 py-3 text-left hover:bg-indigo-50 ${conv.userId === chatUser?._id ? "bg-indigo-50" : ""}`}
+                  className={`w-full flex items-center gap-3 border-b border-b-gray-100 px-4 py-3 text-left hover:bg-indigo-50 ${conv._id === chatUser?._id ? "bg-indigo-50" : ""}`}
                   onClick={() => {
-                    let findUser = allUser.find(u => u._id === conv.userId);
-                    setChatUser(findUser);
+                    const findHistory = history.find(h => h.participants.includes(conv.userId) && h.participants.includes(user._id));
+                    if (findHistory) {
+                      setChatUser(findHistory);
+                    } else {
+                      setChatUser({
+                        _id: null,
+                        participants: [user._id, u._id],
+                        userId: u._id,
+                        username: u.username,
+                        image: u.image,
+                        lastActiveAt: u.lastActiveAt,
+                        lastMessage: "",
+                        lastMessageAt: null,
+                        lastMessageSenderId: null,
+                        unreadCount: {}
+                      });
+                    }
+
                     setMobileView(false);
                   }}
                 >
@@ -470,10 +516,8 @@ export default function Chat() {
                     </div>
                   </div>
 
-                  {conv.unread > 0 && (
-                    <span className="ml-auto inline-flex items-center justify-center w-5 h-5 text-xs font-semibold text-white bg-red-500 rounded-full">
-                      {conv.unread}
-                    </span>
+                  {conv.unreadCount?.[user._id] > 0 && (
+                    <span className="ml-auto ...">{conv.unreadCount[user._id]}</span>
                   )}
 
                 </button>
@@ -483,208 +527,210 @@ export default function Chat() {
           </div>
         </aside>
 
-        {chatUser && (<main className={`flex-1 mb-0 flex flex-col ${mobileView && isMobile ? 'hidden' : 'flex'} overflow-hidden transition-all duration-300`}>
+        {
+          chatUser && (<main className={`flex-1 mb-0 flex flex-col ${mobileView && isMobile ? 'hidden' : 'flex'} overflow-hidden transition-all duration-300`}>
 
-          <div className="sticky sm:top-0 top-0 bg-white z-10 flex items-center gap-3 border-b border-gray-200 px-5 py-3 backdrop-blur">
-            <IoIosArrowBack className={`text-2xl ${fullView ? 'rotate-0' : 'rotate-0 sm:rotate-180'} transition-all duration-300 cursor-pointer`} onClick={() => {
-              setFullView(!fullView);
-              if (window.innerWidth < 660) {
-                setChatUser(null);
-                setMobileView(true);
-              }
-            }} />
-            {chatUser && (
-              <div className="flex items-center justify-center">
-                <img src={chatUser.image} className="h-10 w-10 rounded-full object-cover" />
-                <div>
-                  <p className="font-semibold w-30 truncate">{chatUser.username}</p>
-                  <p className="text-xs text-gray-500">
-                    {onlineUsers.includes(chatUser._id)
-                      ? (
-                        <span className="flex items-center gap-1 text-green-600">
-                          <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                          Active now
-                        </span>
-                      )
-                      : (
-                        <span className="text-gray-500">
-                          {lastActive(chatUser.lastActiveAt)}
-                        </span>
-                      )}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center justify-center gap-x-5 self-end ml-auto">
-
-              <button
-                className="cursor-pointer size-9 bg-red-600 flex items-center justify-center rounded-full text-white"
-                onClick={() => {
-                  setCallType("audio");
-                  setIsCalling(true);
-                  setIsAudio(true);
-                }}
-              >
-                <IoCall className="text-2xl" />
-              </button>
-
-
-
-              <button className="cursor-pointer size-9 bg-red-600 flex items-center justify-center rounded-full text-white">
-                <IoVideocam className=" text-2xl hover:text-green-600" />
-              </button>
-
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 pl-2 scrollbar" ref={scrollRef}>
-            {messages?.map((msg, index) => {
-              const isSender = msg.senderId === user._id;
-              const showAvatar =
-                isSender &&
-                msg.seen &&
-                index === lastReadIndex;
-              return (
-                <div key={msg._id} className={`mb-2 flex ${isSender ? "justify-end" : "justify-start"}`}>
-                  <div className="flex flex-col items-end">
-                    <div className="flex items-start justify-start gap-1">
-                      {!isSender && <img src={chatUser.image} alt="user" className="w-5 h-5 mt-px rounded-full object-center object-cover" />}
-                      <div className={`rounded-2xl px-3 py-2 text-sm shadow-sm ${isSender ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-900"}`}>
-                        {msg.text && <p className="wrap-break-word max-w-64 sm:max-w-96">{msg.text}</p>}
-                        {msg.file_url && (() => {
-                          const isVideo = /\.(mp4|webm|mov)$/i.test(msg.file_url);
-                          if (isVideo) {
-                            return (
-                              <video
-                                src={msg.file_url}
-                                controls
-                                className="mt-2 w-64 sm:w-96 max-w-xs rounded-lg"
-                              />
-                            );
-                          } else {
-                            return (
-                              <a href={msg.file_url} target="_blank">
-                                <img
-                                  src={msg.file_url}
-                                  alt="sent"
-                                  className="mt-2 w-64 sm:w-96 max-w-xs rounded-lg"
-                                />
-                              </a>
-                            );
-                          }
-                        })()}
-
-                        <div className="mt-1 text-[10px] select-none flex justify-between items-center">
-                          <span>{moment(msg.createdAt).format("h:mm A")}</span>
-                        </div>
-                      </div>
-                    </div>
-                    {showAvatar && (
-                      <img
-                        src={chatUser.image}
-                        alt="user"
-                        className="w-5 h-5 rounded-full object-cover"
-                      />
-                    )}
-                    {isSender && !msg.seen && (
-                      <span className="text-[10px] font-semibold">Unread</span>
-                    )}
+            <div className="sticky sm:top-0 top-0 bg-white z-10 flex items-center gap-3 border-b border-gray-200 px-5 py-3 backdrop-blur">
+              <IoIosArrowBack className={`text-2xl ${fullView ? 'rotate-0' : 'rotate-0 sm:rotate-180'} transition-all duration-300 cursor-pointer`} onClick={() => {
+                setFullView(!fullView);
+                if (window.innerWidth < 660) {
+                  setChatUser(null);
+                  setMobileView(true);
+                }
+              }} />
+              {chatUser && (
+                <div className="flex items-center justify-center">
+                  <img src={chatUser.image} className="h-10 w-10 rounded-full object-cover" />
+                  <div>
+                    <p className="font-semibold w-30 truncate">{chatUser.username}</p>
+                    <p className="text-xs text-gray-500">
+                      {onlineUsers.includes(chatUser._id)
+                        ? (
+                          <span className="flex items-center gap-1 text-green-600">
+                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                            Active now
+                          </span>
+                        )
+                        : (
+                          <span className="text-gray-500">
+                            {lastActive(chatUser.lastActiveAt)}
+                          </span>
+                        )}
+                    </p>
                   </div>
-                </div>
-              );
-            })}
-            {isTyping && (
-              <div className="flex items-center gap-2 text-sm text-gray-500 ml-8 mt-1 animate-pulse">
-                <span className="flex gap-1">
-                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
-                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></span>
-                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-300"></span>
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Composer */}
-          <div className="border-t border-gray-200 p-3">
-            <div className="flex flex-col gap-2 rounded-2xl bg-gray-50 p-2 ring-1 ring-gray-200 relative">
-
-              {/* File Preview */}
-              {file && (
-                <div className="relative w-32 h-32">
-                  {file.type.startsWith("video/") ? (
-                    <video
-                      src={URL.createObjectURL(file)}
-                      controls
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                  ) : (
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt="preview"
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                  )}
-                  <button
-                    onClick={() => setFile(null)}
-                    className="absolute -top-2 -right-2 bg-gray-200 rounded-full p-1 hover:bg-gray-300"
-                  >
-                    <ImCross className="text-sm" />
-                  </button>
                 </div>
               )}
 
+              <div className="flex items-center justify-center gap-x-5 self-end ml-auto">
 
-              <div className="flex items-end gap-2">
-                <textarea
-                  ref={inputRef}
-                  rows={1}
-                  value={input}
-                  placeholder="Aa..."
-                  className="flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none"
-                  onChange={(e) => setInput(e.target.value)}
-                />
+                <button
+                  className="cursor-pointer size-9 bg-red-600 flex items-center justify-center rounded-full text-white"
+                  onClick={() => {
+                    setCallType("audio");
+                    setIsCalling(true);
+                    setIsAudio(true);
+                  }}
+                >
+                  <IoCall className="text-2xl" />
+                </button>
 
-                <input
-                  type="file"
-                  accept="image/*,video/*"
-                  onChange={e => setFile(e.target.files[0])}
-                  className="hidden"
-                  id="fileInput"
-                />
 
-                <label htmlFor="fileInput" className="cursor-pointer self-center flex items-center justify-center">
-                  <FaImage className="text-gray-600 text-3xl hover:text-indigo-500" />
-                </label>
-                {input || file ? (
-                  <button
-                    className={`inline-flex h-9 items-center justify-center rounded-xl px-4 text-sm font-semibold text-white
-        ${isUploading ? 'pointer-events-none' : 'pointer-events-auto'}
-        bg-indigo-700`}
-                    onClick={() => {
-                      inputRef.current?.focus({ preventScroll: true });
-                      handleSendMessage();
-                    }}
-                    disabled={isUploading || isLoading}
-                  >
-                    {isUploading
-                      ? "Uploading..."
-                      : "Send"}
-                  </button>
-                ) : (
-                  <button
-                    className="text-red-600 inline-flex h-9 text-2xl ml-2 cursor-pointer items-center justify-center"
-                    onClick={() => handleSendMessage("❤️")}
-                  >
-                    <FaHeart />
-                  </button>
-                )}
+
+                <button className="cursor-pointer size-9 bg-red-600 flex items-center justify-center rounded-full text-white">
+                  <IoVideocam className=" text-2xl hover:text-green-600" />
+                </button>
 
               </div>
             </div>
-          </div>
 
-        </main>)}
+            <div className="flex-1 overflow-y-auto p-4 pl-2 scrollbar" ref={scrollRef}>
+              {messages?.map((msg, index) => {
+                const isSender = msg.senderId === user._id;
+                const showAvatar =
+                  isSender &&
+                  msg.seen &&
+                  index === lastReadIndex;
+                return (
+                  <div key={msg._id} className={`mb-2 flex ${isSender ? "justify-end" : "justify-start"}`}>
+                    <div className="flex flex-col items-end">
+                      <div className="flex items-start justify-start gap-1">
+                        {!isSender && <img src={chatUser.image} alt="user" className="w-5 h-5 mt-px rounded-full object-center object-cover" />}
+                        <div className={`rounded-2xl px-3 py-2 text-sm shadow-sm ${isSender ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-900"}`}>
+                          {msg.text && <p className="wrap-break-word max-w-64 sm:max-w-96">{msg.text}</p>}
+                          {msg.file_url && (() => {
+                            const isVideo = /\.(mp4|webm|mov)$/i.test(msg.file_url);
+                            if (isVideo) {
+                              return (
+                                <video
+                                  src={msg.file_url}
+                                  controls
+                                  className="mt-2 w-64 sm:w-96 max-w-xs rounded-lg"
+                                />
+                              );
+                            } else {
+                              return (
+                                <a href={msg.file_url} target="_blank">
+                                  <img
+                                    src={msg.file_url}
+                                    alt="sent"
+                                    className="mt-2 w-64 sm:w-96 max-w-xs rounded-lg"
+                                  />
+                                </a>
+                              );
+                            }
+                          })()}
+
+                          <div className="mt-1 text-[10px] select-none flex justify-between items-center">
+                            <span>{moment(msg.createdAt).format("h:mm A")}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {showAvatar && (
+                        <img
+                          src={chatUser.image}
+                          alt="user"
+                          className="w-5 h-5 rounded-full object-cover"
+                        />
+                      )}
+                      {isSender && !msg.seen && (
+                        <span className="text-[10px] font-semibold">Unread</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {isTyping && (
+                <div className="flex items-center gap-2 text-sm text-gray-500 ml-8 mt-1 animate-pulse">
+                  <span className="flex gap-1">
+                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></span>
+                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-300"></span>
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Composer */}
+            <div className="border-t border-gray-200 p-3">
+              <div className="flex flex-col gap-2 rounded-2xl bg-gray-50 p-2 ring-1 ring-gray-200 relative">
+
+                {/* File Preview */}
+                {file && (
+                  <div className="relative w-32 h-32">
+                    {file.type.startsWith("video/") ? (
+                      <video
+                        src={URL.createObjectURL(file)}
+                        controls
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    ) : (
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt="preview"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    )}
+                    <button
+                      onClick={() => setFile(null)}
+                      className="absolute -top-2 -right-2 bg-gray-200 rounded-full p-1 hover:bg-gray-300"
+                    >
+                      <ImCross className="text-sm" />
+                    </button>
+                  </div>
+                )}
+
+
+                <div className="flex items-end gap-2">
+                  <textarea
+                    ref={inputRef}
+                    rows={1}
+                    value={input}
+                    placeholder="Aa..."
+                    className="flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none"
+                    onChange={(e) => setInput(e.target.value)}
+                  />
+
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={e => setFile(e.target.files[0])}
+                    className="hidden"
+                    id="fileInput"
+                  />
+
+                  <label htmlFor="fileInput" className="cursor-pointer self-center flex items-center justify-center">
+                    <FaImage className="text-gray-600 text-3xl hover:text-indigo-500" />
+                  </label>
+                  {input || file ? (
+                    <button
+                      className={`inline-flex h-9 items-center justify-center rounded-xl px-4 text-sm font-semibold text-white
+        ${isUploading ? 'pointer-events-none' : 'pointer-events-auto'}
+        bg-indigo-700`}
+                      onClick={() => {
+                        inputRef.current?.focus({ preventScroll: true });
+                        handleSendMessage();
+                      }}
+                      disabled={isUploading || isLoading}
+                    >
+                      {isUploading
+                        ? "Uploading..."
+                        : "Send"}
+                    </button>
+                  ) : (
+                    <button
+                      className="text-red-600 inline-flex h-9 text-2xl ml-2 cursor-pointer items-center justify-center"
+                      onClick={() => handleSendMessage("❤️")}
+                    >
+                      <FaHeart />
+                    </button>
+                  )}
+
+                </div>
+              </div>
+            </div>
+
+          </main>)
+        }
       </div >
     </div >
   )

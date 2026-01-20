@@ -54,8 +54,12 @@ const MessageSchema = new mongoose.Schema(
         seenAt: {
             type: Date,
         },
+
+        createdAt: {
+            type: Date,
+        },
     },
-    
+
     { timestamps: true }
 );
 
