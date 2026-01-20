@@ -83,13 +83,8 @@ export default function Chat() {
       socketRef.current.emit("join", { userId: user._id });
 
       socketRef.current.on("receiveMessage", async (msg) => {
-        setMessages(prev => {
-          const exists = prev.find(m => m._id === msg._id);
-          if (exists) return prev;
-          return [...prev, msg];
-        });
+        setMessages(prev => [...prev, msg]);
         updateMessage(msg);
-
       });
 
       socketRef.current.on("online-users", (users) => {
@@ -232,6 +227,11 @@ export default function Chat() {
     updateMessage(newMessage);
     setInput('');
     setFile(null);
+
+    if (!chatUser?._id) {
+      setChatUser(prev => ({ ...prev, _id: newMessage.conversationId }));
+    }
+
     socketRef.current.emit("sendMessage", { message: newMessage });
 
     try {
@@ -244,64 +244,46 @@ export default function Chat() {
 
       if (data.saveMessage) {
         setMessages(prev =>
-          prev.map(m => m._id === tempId ? Object.assign(m, data.saveMessage) : m)
+          prev.map(m => m._id === tempId ? { ...m, ...data.saveMessage } : m)
         );
+
         updateMessage(data.saveMessage);
-        if (!chatUser._id || chatUser._id.startsWith("temp-")) {
+        if (!chatUser._id) {
           setChatUser(prev => ({ ...prev, _id: data.saveMessage.conversationId }));
-          fetchMessages(data.saveMessage.conversationId);
         }
       }
-
     } catch (err) {
       console.error(err);
     }
 
   };
 
-  const fetchMessages = async (conversationId) => {
-    if (!conversationId) return;
-    try {
+  useEffect(() => {
+    if (!chatUser?._id) {
+      setMessages([]);
+      return;
+    }
+
+    const fetchMessage = async () => {
       const res = await fetch('/api/message/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId }),
+        body: JSON.stringify({ conversationId: chatUser._id, })
       });
 
       const data = await res.json();
       if (data.success) {
         setMessages(data.messages);
       }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  useEffect(() => {
-    if (!chatUser?._id) {
-      setMessages([]);
-      return;
-    }
-    if (!chatUser._id.startsWith("temp-")) {
-      fetchMessages(chatUser._id);
-    }
+    };
+    fetchMessage();
   }, [chatUser?._id]);
-
 
 
 
   useEffect(() => {
 
     if (!user?._id) return;
-
-    if (!chatUser?._id) {
-      setMessages([]);
-      return;
-    }
-
-    if (!chatUser._id.startsWith("temp-")) {
-      fetchMessages(chatUser._id);
-    }
 
     const fetchHistory = async () => {
       const res = await fetch("/api/message/history", {
@@ -362,7 +344,7 @@ export default function Chat() {
   const filteredUsers = allUser?.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
-
+  
 
   return (
     <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
