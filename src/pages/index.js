@@ -246,16 +246,35 @@ export default function Chat() {
         setMessages(prev =>
           prev.map(m => m._id === tempId ? Object.assign(m, data.saveMessage) : m)
         );
-
         updateMessage(data.saveMessage);
-        if (!chatUser._id) {
+        if (!chatUser._id || chatUser._id.startsWith("temp-")) {
           setChatUser(prev => ({ ...prev, _id: data.saveMessage.conversationId }));
+          fetchMessages(data.saveMessage.conversationId);
         }
       }
+
     } catch (err) {
       console.error(err);
     }
 
+  };
+
+  const fetchMessages = async (conversationId) => {
+    if (!conversationId) return;
+    try {
+      const res = await fetch('/api/message/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setMessages(data.messages);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   useEffect(() => {
@@ -263,27 +282,26 @@ export default function Chat() {
       setMessages([]);
       return;
     }
-
-    const fetchMessage = async () => {
-      const res = await fetch('/api/message/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId: chatUser._id, })
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setMessages(data.messages);
-      }
-    };
-    fetchMessage();
+    if (!chatUser._id.startsWith("temp-")) {
+      fetchMessages(chatUser._id);
+    }
   }, [chatUser?._id]);
+
 
 
 
   useEffect(() => {
 
     if (!user?._id) return;
+
+    if (!chatUser?._id) {
+      setMessages([]);
+      return;
+    }
+
+    if (!chatUser._id.startsWith("temp-")) {
+      fetchMessages(chatUser._id);
+    }
 
     const fetchHistory = async () => {
       const res = await fetch("/api/message/history", {
