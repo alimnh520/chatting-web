@@ -209,9 +209,9 @@ export default function Chat() {
       file_id = uploadResult.public_id;
     }
 
-    const newMessage = {
+    const optimisticMessage = {
       _id: Date.now().toString(),
-      conversationId: chatUser._id ? chatUser._id : null,
+      conversationId: chatUser?._id || null,
       senderId: user._id,
       receiverId: chatUser?.userId,
       text: messageText,
@@ -221,19 +221,41 @@ export default function Chat() {
       createdAt: new Date(),
     };
 
+    if (chatUser?._id) {
+      setMessages(prev => [...prev, optimisticMessage]);
+      updateMessage(optimisticMessage);
+      socketRef.current.emit("sendMessage", { message: optimisticMessage });
+    }
+
     try {
       const res = await fetch("/api/message/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newMessage }),
+        body: JSON.stringify({ newMessage: optimisticMessage }),
       });
+
       const data = await res.json();
-      const updatedMessage = data.saveMessage
-      setInput('');
-      setFile(null);
-      setMessages(prev => [...prev, updatedMessage]);
-      updateMessage(updatedMessage);
-      socketRef.current.emit("sendMessage", { message: updatedMessage });
+
+      if (data.saveMessage) {
+
+        setInput("");
+        setFile(null);
+
+
+        const realMessage = data.saveMessage;
+        if (!chatUser?._id) {
+          setMessages(prev => [...prev, realMessage]);
+          updateMessage(realMessage);
+          socketRef.current.emit("sendMessage", { message: realMessage });
+
+          setChatUser(prev => ({
+            ...prev,
+            _id: realMessage.conversationId
+          }));
+        }
+      }
+
+
     } catch (err) {
       console.error(err);
     }
