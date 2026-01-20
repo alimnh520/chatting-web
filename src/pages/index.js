@@ -227,17 +227,30 @@ export default function Chat() {
     try {
       setInput('');
       setFile(null);
-
+      socketRef.current.emit("sendMessage", { message: newMessage });
       const res = await fetch("/api/message/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newMessage }),
       });
       const data = await res.json();
+      let messageToUse;
+      if (chatUser?._id) {
+        messageToUse = newMessage;
+      } else {
+        messageToUse = data.saveMessage;
+      }
 
-      setMessages(prev => [{ ...prev, newMessage: data.saveMessage }]);
-      updateMessage({ newMessage: data.saveMessage });
-      socketRef.current.emit("sendMessage", { message: data.saveMessage });
+      setMessages(prev => [...prev, messageToUse]);
+      updateMessage(messageToUse);
+
+      if (!chatUser?._id) {
+        setChatUser(prev => ({
+          ...prev,
+          _id: messageToUse.conversationId
+        }));
+      }
+
 
     } catch (err) {
       console.error("Send message error:", err);
@@ -330,10 +343,6 @@ export default function Chat() {
   const filteredUsers = allUser?.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
-
-  console.log(history[0]?._id);
-  console.log(chatUser?._id);
-
 
   return (
     <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm: p-4 text-black">
@@ -431,7 +440,7 @@ export default function Chat() {
               return (
                 <button
                   key={conv._id}
-                  className={`w-full flex items-center gap-3 border-b border-b-gray-100 px-4 py-3 text-left hover:bg-indigo-50 ${conv._id === chatUser?._id ? "bg-indigo-50" : ""}`}
+                  className={`w-full flex items-center gap-3 border-b border-b-gray-100 px-4 py-3 text-left hover:bg-indigo-50 ${conv.userId === chatUser?.userId ? "bg-indigo-50" : ""}`}
                   onClick={() => {
                     const findHistory = history.find(h => h.participants.includes(conv.userId) && h.participants.includes(user._id));
                     if (findHistory) {
