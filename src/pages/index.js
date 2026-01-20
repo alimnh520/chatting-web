@@ -209,11 +209,9 @@ export default function Chat() {
       file_id = uploadResult.public_id;
     }
 
-    // temporary message
-    const tempId = `temp-${Date.now()}`;
     const newMessage = {
       _id: tempId,
-      conversationId: chatUser?._id || tempId,
+      conversationId: chatUser?._id,
       senderId: user._id,
       receiverId: chatUser?.userId,
       text: messageText,
@@ -223,39 +221,30 @@ export default function Chat() {
       createdAt: new Date(),
     };
 
-    setMessages(prev => [...prev, newMessage]);
-    updateMessage(newMessage);
-    setInput('');
-    setFile(null);
-
-    if (!chatUser?._id) {
-      setChatUser(prev => ({ ...prev, _id: newMessage.conversationId }));
-    }
-
-    socketRef.current.emit("sendMessage", { message: newMessage });
-
-    try {
-      const res = await fetch("/api/message/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newMessage }),
-      });
-      const data = await res.json();
-
-      if (data.saveMessage) {
-        setMessages(prev =>
-          prev.map(m => m._id === tempId ? { ...m, ...data.saveMessage } : m)
-        );
-
-        updateMessage(data.saveMessage);
-        if (!chatUser._id) {
-          setChatUser(prev => ({ ...prev, _id: data.saveMessage.conversationId }));
-        }
+    if (chatUser?._id) {
+      setInput('');
+      setFile(null);
+      setMessages(prev => [...prev, newMessage]);
+      updateMessage(newMessage);
+      socketRef.current.emit("sendMessage", { message: newMessage });
+    } else {
+      try {
+        const res = await fetch("/api/message/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ newMessage }),
+        });
+        const data = await res.json();
+        const updatedMessage = data.saveMessage
+        setInput('');
+        setFile(null);
+        setMessages(prev => [...prev, updatedMessage]);
+        updateMessage(updatedMessage);
+        socketRef.current.emit("sendMessage", { message: updatedMessage });
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err) {
-      console.error(err);
     }
-
   };
 
   useEffect(() => {
@@ -278,7 +267,6 @@ export default function Chat() {
     };
     fetchMessage();
   }, [chatUser?._id]);
-
 
 
   useEffect(() => {
@@ -344,7 +332,10 @@ export default function Chat() {
   const filteredUsers = allUser?.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
-  
+
+  console.log(chatUser?._id);
+
+
 
   return (
     <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
