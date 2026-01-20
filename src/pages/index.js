@@ -215,8 +215,8 @@ export default function Chat() {
     }
 
     let newMessage = {
-      _id: new Date(),
-      conversationId: chatUser._id,
+      _id: Date.now().toString(),
+      conversationId: chatUser._id + user._id,
       senderId: user._id,
       receiverId: chatUser._id,
       text: messageText,
@@ -233,6 +233,7 @@ export default function Chat() {
         body: JSON.stringify({ newMessage }),
       });
       socketRef.current.emit("sendMessage", { message: newMessage });
+      setMessages(prev => [...prev, newMessage]);
       updateMessage(newMessage);
       setInput('');
       setFile(null);
@@ -282,7 +283,8 @@ export default function Chat() {
       setHistory(history);
 
       if (history.length > 0 && !isMobile) {
-        setChatUser(history[0]);
+        const firstHistory = allUser.find(u => u._id === history[0]?.userId);
+        setChatUser(firstHistory);
       }
     };
 
@@ -328,12 +330,7 @@ export default function Chat() {
   const filteredUsers = allUser.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
-
-  console.log(chatUser);
-  console.log(history);
-
-
-
+  const filterHistory = filteredUsers?.filter(self => self._id !== user?._id)
 
 
   return (
@@ -368,7 +365,7 @@ export default function Chat() {
                   if (isSearch) setIsSearch(false);
                 }}>
                   <div className="w-full relative max-h-80 bg-white rounded-2xl space-y-1.5 shadow-lg border border-gray-200 p-4 overflow-y-auto z-10 scrollbar">
-                    {filteredUsers.filter(self => self._id !== user?._id).map(u => (
+                    {filterHistory.map(u => (
                       <div key={u._id} className="flex bg-gray-200 items-center gap-3 p-2 rounded-xl hover:bg-gray-100 cursor-pointer"
                         onClick={() => {
                           setChatUser(u);
