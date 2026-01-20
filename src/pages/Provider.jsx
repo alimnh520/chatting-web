@@ -35,32 +35,6 @@ export default function AppProvider({ children }) {
         fetchUser();
     }, []);
 
-    useEffect(() => {
-        if (!navigator.geolocation) {
-            alert("Geolocation not supported");
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const loc = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude,
-                };
-                try {
-                    await fetch("/api/mydata", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ location: loc }),
-                    });
-                } catch (error) {
-                    console.error("Error sending location:", error);
-                }
-            },
-            (error) => console.error("Geolocation error:", error)
-        );
-    }, []);
-
     return (
         <UserContext.Provider value={{ user }}>
             {children}

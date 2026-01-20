@@ -1,5 +1,5 @@
 import { connectDB } from "@/lib/connectDb";
-import { getCollection } from "@/lib/mongoclient";
+import User from "@/models/User";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -16,9 +16,8 @@ export default async function handler(req, res) {
         }
 
         await connectDB();
-        const collection = await getCollection("user");
 
-        const existingUser = await collection.findOne({ email });
+        const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(409).json({ message: "এই ইমেইল আগে থেকেই আছে" });
         }
@@ -26,7 +25,7 @@ export default async function handler(req, res) {
         // 🔐 password hash করা (strongly recommended)
         // const hashedPassword = await bcrypt.hash(password, 10);
 
-        const result = await collection.insertOne({
+        const newUser = new User({
             username,
             email,
             password,
@@ -34,9 +33,10 @@ export default async function handler(req, res) {
             imageId: imageId || "",
             createdAt: new Date(),
         });
+        await newUser.save();
 
         const token = jwt.sign(
-            { user_id: result.insertedId },
+            { user_id: newUser._id },
             process.env.JWT_SECRET,
             { expiresIn: "1d" }
         );

@@ -1,21 +1,22 @@
 import cloudinary from "@/cloudinary/cloudConfig";
-import { getCollection } from "@/lib/mongoclient";
+import { connectDB } from "@/lib/connectDb";
+import User from "@/models/User";
 import { ObjectId } from "mongodb";
 
 export default async function handler(req, res) {
     if (req.method === "PATCH") {
         try {
             const { userId, username, email, password, imageUrl, imageId, deleteId } = req.body;
-            
+
             if (!userId) {
                 return res.status(400).json({ success: false, message: "User ID is required" });
             }
 
-            const userProfile = await getCollection("user");
-
             if (deleteId) {
                 await cloudinary.uploader.destroy(deleteId.toString(), { resource_type: "image" });
             }
+
+            await connectDB();
 
             const updateData = {};
             if (username) updateData.username = username;
@@ -25,7 +26,7 @@ export default async function handler(req, res) {
             if (imageId) updateData.imageId = imageId;
 
             if (Object.keys(updateData).length > 0) {
-                await userProfile.updateOne(
+                await User.updateOne(
                     { _id: new ObjectId(userId) },
                     { $set: updateData }
                 );

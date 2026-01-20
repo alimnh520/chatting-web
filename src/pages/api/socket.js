@@ -12,6 +12,7 @@ const onlineUsers = new Map();
 
 export default function handler(req, res) {
     if (!res.socket.server.io) {
+        
         console.log("🟢 Socket server started");
 
         const io = new Server(res.socket.server, {
@@ -90,8 +91,6 @@ export default function handler(req, res) {
             });
 
 
-
-
             socket.on("disconnect", async () => {
                 const entry = [...onlineUsers.entries()]
                     .find(([_, socketId]) => socketId === socket.id);
@@ -113,7 +112,6 @@ export default function handler(req, res) {
 
                     io.emit("online-users", Array.from(onlineUsers.keys()));
 
-                    // Typing cleanup
                     io.emit("user-stop-typing", { from: userId });
                 }
             });

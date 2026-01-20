@@ -1,26 +1,26 @@
-import { getCollection } from "@/lib/mongoclient";
+import User from "@/models/User";
 
 export default async function handler(req, res) {
+    if (req.method !== "GET") {
+        return res.status(405).json({ success: false, message: "Method not allowed" });
+    }
 
-    if (req.method === "GET") {
-        try {
-            const collection = await getCollection("user");
+    try {
+        const users = await User
+            .find({})
+            .select("-password")
+            .sort({ createdAt: -1 });
 
-            const users = await collection
-                .find({}, { projection: { password: 0 } })
-                .sort({ createdAt: -1 })
-                .toArray();
+        return res.status(200).json({
+            success: true,
+            users
+        });
 
-            return res.status(200).json({
-                success: true,
-                users
-            });
-
-        } catch (error) {
-            return res.status(500).json({
-                success: false,
-                message: "Failed to fetch users"
-            });
-        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch users"
+        });
     }
 }

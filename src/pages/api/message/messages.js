@@ -1,4 +1,4 @@
-import { getCollection } from "@/lib/mongoclient";
+import Message from "@/models/Message";
 import { ObjectId } from "mongodb";
 
 export default async function handler(req, res) {
@@ -10,12 +10,9 @@ export default async function handler(req, res) {
                 return res.status(400).json({ success: false, message: "conversationId is required" });
             }
 
-            const messageCol = await getCollection("messages");
-
-            const messages = await messageCol
+            const messages = await Message
                 .find({ conversationId: new ObjectId(conversationId) })
                 .sort({ createdAt: 1 })
-                .toArray();
 
             return res.status(200).json({
                 success: true,

@@ -1,4 +1,5 @@
-import { getCollection } from "@/lib/mongoclient";
+import { connectDB } from "@/lib/connectDb";
+import User from "@/models/User";
 import jwt from "jsonwebtoken";
 
 export default async function handler(req, res) {
@@ -13,8 +14,9 @@ export default async function handler(req, res) {
     }
 
     try {
-        const collection = await getCollection("user");
-        const user = await collection.findOne({ email });
+        await connectDB();
+
+        const user = await User.findOne({ email }).select('password');
 
         if (!user || password !== user.password) {
             return res.status(401).json({ message: "Invalid email or password" });

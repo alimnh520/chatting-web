@@ -32,7 +32,7 @@ const MessageSchema = new mongoose.Schema(
         },
 
         callDuration: {
-            type: Number, // seconds
+            type: Number,
             default: 0
         },
 
@@ -55,10 +55,10 @@ const MessageSchema = new mongoose.Schema(
             type: Date,
         },
     },
+    
     { timestamps: true }
 );
 
-// conversation wise fast load
 MessageSchema.index({ conversationId: 1, createdAt: 1 });
 
 export default mongoose.models.Message ||

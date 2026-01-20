@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const ConversationSchema = new mongoose.Schema(
+const HistorySchema = new mongoose.Schema(
     {
         participants: [
             {
@@ -11,12 +11,19 @@ const ConversationSchema = new mongoose.Schema(
         ],
 
         lastMessage: {
-            text: String,
-            senderId: {
-                type: String,
-                ref: "User",
-            },
-            createdAt: Date,
+            type: String,
+            default: "",
+        },
+
+        lastMessageAt: {
+            type: Date,
+            default: null,
+        },
+
+        lastMessageSenderId: {
+            type: String,
+            ref: "User",
+            default: null,
         },
 
         unreadCount: {
@@ -28,7 +35,7 @@ const ConversationSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-ConversationSchema.index({ members: 1 });
+HistorySchema.index({ participants: 1 });
 
-export default mongoose.models.Conversation ||
-    mongoose.model("Conversation", ConversationSchema);
+export default mongoose.models.History ||
+    mongoose.model("History", HistorySchema);

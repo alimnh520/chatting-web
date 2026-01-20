@@ -1,4 +1,5 @@
-import { getCollection } from "@/lib/mongoclient";
+import History from "@/models/History";
+import User from "@/models/User";
 import { ObjectId } from "mongodb";
 
 export default async function handler(req, res) {
@@ -9,34 +10,30 @@ export default async function handler(req, res) {
         }
 
         try {
-
-            const convCol = await getCollection("conversations");
-            const userCol = await getCollection("user");
-
-            const conversations = await convCol
+            const conversations = await History
                 .find({ participants: user_id })
-                .sort({ lastMessageAt: -1 })
-                .toArray();
+                .sort({ lastMessageAt: -1 });
 
             const history = await Promise.all(
                 conversations.map(async (conv) => {
                     const otherUserId = conv.participants.find(id => id !== user_id);
 
-                    const otherUser = await userCol.findOne(
-                        { _id: new ObjectId(otherUserId) },
-                        { projection: { password: 0 } }
-                    );
+                    const otherUser = await User.findOne(
+                        { _id: new ObjectId(otherUserId) }
+                    ).select('-password');
 
                     return {
-                        ...conv,
+                        ...conv.toObject(),
                         userId: otherUserId,
-                        username: otherUser?.username,
+                        username: otherUser?.username || "",
                         image: otherUser?.image || null,
                         lastActiveAt: otherUser?.lastActiveAt || null
                     };
                 })
             );
+
             res.status(200).json({ success: true, history });
+
         } catch (err) {
             console.error(err);
             res.status(500).json({ success: false, message: "Failed to fetch history" });
