@@ -83,8 +83,13 @@ export default function Chat() {
       socketRef.current.emit("join", { userId: user._id });
 
       socketRef.current.on("receiveMessage", async (msg) => {
-        setMessages(prev => [...prev, msg]);
+        setMessages(prev => {
+          const exists = prev.find(m => m._id === msg._id);
+          if (exists) return prev;
+          return [...prev, msg];
+        });
         updateMessage(msg);
+
       });
 
       socketRef.current.on("online-users", (users) => {
@@ -227,11 +232,6 @@ export default function Chat() {
     updateMessage(newMessage);
     setInput('');
     setFile(null);
-
-    if (!chatUser?._id) {
-      setChatUser(prev => ({ ...prev, _id: newMessage.conversationId }));
-    }
-
     socketRef.current.emit("sendMessage", { message: newMessage });
 
     try {
@@ -244,7 +244,7 @@ export default function Chat() {
 
       if (data.saveMessage) {
         setMessages(prev =>
-          prev.map(m => m._id === tempId ? { ...m, ...data.saveMessage } : m)
+          prev.map(m => m._id === tempId ? Object.assign(m, data.saveMessage) : m)
         );
 
         updateMessage(data.saveMessage);
@@ -345,8 +345,9 @@ export default function Chat() {
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
 
+
   return (
-    <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm: p-4 text-black">
+    <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
       <div div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-white sm:bg-gray-400" >
         <aside className={` fixed sm:static top-0 left-0 z-20 h-full transform transition-all duration-300 ease-in-out ${mobileView ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0 w-full backdrop-blur ${fullView ? 'sm:w-80' : 'sm:w-0'} ${mobileView ? 'w-full' : 'w-0'} overflow-hidden border-r border-gray-200`}>
           <div className="p-4 pb-2">
