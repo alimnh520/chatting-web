@@ -216,7 +216,7 @@ export default function Chat() {
 
     let newMessage = {
       _id: Date.now().toString(),
-      conversationId: (chatUser._id + user._id).toString(),
+      conversationId: chatUser._id?.toString(),
       senderId: user._id,
       receiverId: chatUser._id,
       text: messageText,
@@ -252,7 +252,7 @@ export default function Chat() {
       const res = await fetch('/api/message/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId: chatUser._id + user._id, })
+        body: JSON.stringify({ conversationId: chatUser._id, })
       });
 
       const data = await res.json();
@@ -282,8 +282,7 @@ export default function Chat() {
       setHistory(history);
 
       if (history.length > 0 && !isMobile) {
-        const firstHistory = allUser.find(u => u._id === history[0]?.userId);
-        setChatUser(firstHistory);
+        setChatUser(history[0]);
       }
     };
 
@@ -326,14 +325,13 @@ export default function Chat() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
 
-  const filteredUsers = allUser.filter(u =>
+  const filteredUsers = allUser?.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
-  const filterHistory = filteredUsers?.filter(self => self._id !== user?._id);
+
 
   console.log(chatUser);
   
-
 
   return (
     <div className="h-screen w-full bg-gradient-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
@@ -367,10 +365,11 @@ export default function Chat() {
                   if (isSearch) setIsSearch(false);
                 }}>
                   <div className="w-full relative max-h-80 bg-white rounded-2xl space-y-1.5 shadow-lg border border-gray-200 p-4 overflow-y-auto z-10 scrollbar">
-                    {filterHistory.map(u => (
+                    {filteredUsers?.filter(self => self._id !== user?._id).map(u => (
                       <div key={u._id} className="flex bg-gray-200 items-center gap-3 p-2 rounded-xl hover:bg-gray-100 cursor-pointer"
                         onClick={() => {
-                          setChatUser(u);
+                          const findHistory = history.find(h => h.participants.includes(u._id) && h.participants.includes(user._id));
+                          setChatUser(findHistory || u);
                           setMobileView(false);
                           setIsSearch(false);
                         }}

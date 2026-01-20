@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     try {
         const { newMessage } = req.body;
 
-        const { conversationId,
+        const {
             senderId,
             receiverId,
             text,
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
         }
 
         const saveMessage = new Message({
-            conversationId,
+            conversationId: conversation._id,
             senderId,
             receiverId,
             text,
