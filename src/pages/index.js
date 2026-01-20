@@ -233,11 +233,10 @@ export default function Chat() {
         body: JSON.stringify({ newMessage }),
       });
       socketRef.current.emit("sendMessage", { message: newMessage });
-      setMessages(prev => [...prev, newMessage]);
-      updateMessage(newMessage);
       setInput('');
       setFile(null);
-
+      updateMessage(newMessage);
+      setMessages(prev => [...prev, newMessage]);
     } catch (err) {
       console.error("Send message error:", err);
     }
