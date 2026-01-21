@@ -1,6 +1,6 @@
-import { getCollection } from "@/lib/mongoclient";
 import { Server } from "socket.io";
 import { ObjectId } from "mongodb";
+import User from "@/models/User";
 
 export const config = {
     api: {
@@ -28,8 +28,7 @@ export default function handler(req, res) {
                 socket.join(userId);
                 onlineUsers.set(userId, socket.id);
 
-                const users = await getCollection("user");
-                await users.updateOne(
+                await User.updateOne(
                     { _id: new ObjectId(userId) },
                     {
                         $set: {
@@ -83,14 +82,6 @@ export default function handler(req, res) {
                 io.to(to).emit("call-answer", { answer });
             });
 
-            socket.on("ice-candidate", ({ to, candidate }) => {
-                io.to(to).emit("ice-candidate", { candidate });
-            });
-            socket.on("call-ended", ({ to }) => {
-                io.to(to).emit("call-ended");
-            });
-
-
             socket.on("disconnect", async () => {
                 const entry = [...onlineUsers.entries()]
                     .find(([_, socketId]) => socketId === socket.id);
@@ -99,8 +90,7 @@ export default function handler(req, res) {
                     const [userId] = entry;
                     onlineUsers.delete(userId);
 
-                    const users = await getCollection("user");
-                    await users.updateOne(
+                    await User.updateOne(
                         { _id: new ObjectId(userId) },
                         {
                             $set: {

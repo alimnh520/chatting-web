@@ -345,6 +345,8 @@ export default function Chat() {
   );
 
 
+  console.log(allUser);
+  
 
 
   return (
