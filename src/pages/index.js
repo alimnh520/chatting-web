@@ -345,9 +345,6 @@ export default function Chat() {
   );
 
 
-  console.log(allUser);
-  
-
 
   return (
     <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
@@ -476,7 +473,7 @@ export default function Chat() {
                       className="w-full h-full rounded-full object-center object-cover"
                     />
                     <div className="absolute -bottom-1 -right-1">
-                      {onlineUsers.includes(conv._id) ? (
+                      {onlineUsers.includes(conv.userId) ? (
                         <span className="inline-block w-2 h-2 bg-green-600 rounded-full"></span>
                       ) : (
                         <span
@@ -545,7 +542,7 @@ export default function Chat() {
                   <div>
                     <p className="font-semibold w-30 truncate">{chatUser.username}</p>
                     <p className="text-xs text-gray-500">
-                      {onlineUsers.includes(chatUser._id)
+                      {onlineUsers.includes(chatUser.userId)
                         ? (
                           <span className="flex items-center gap-1 text-green-600">
                             <span className="w-2 h-2 bg-green-500 rounded-full"></span>
@@ -554,7 +551,7 @@ export default function Chat() {
                         )
                         : (
                           <span className="text-gray-500">
-                            {lastActive(chatUser.lastActiveAt)}
+                            {lastActive(chatUser.lastActiveAt || chatUser?.user?.lastActiveAt)}
                           </span>
                         )}
                     </p>
