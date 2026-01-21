@@ -37,9 +37,6 @@ export default function Chat() {
 
   const inputRef = useRef(null);
   const socketRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
-
-  const messageCacheRef = useRef({});
 
 
   useEffect(() => {
@@ -58,6 +55,7 @@ export default function Chat() {
 
       return () => window.removeEventListener("popstate", handlePopState);
     }
+
   }, [mobileView]);
 
   useEffect(() => {
@@ -103,6 +101,8 @@ export default function Chat() {
       }
     };
   }, [user?._id]);
+
+
 
 
   const updateMessage = (msg) => {
@@ -261,6 +261,24 @@ export default function Chat() {
 
   useEffect(() => {
     if (!chatUser?._id) return;
+    const handleSeenMessages = async () => {
+      try {
+        await fetch('/api/message/seen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversationId: chatUser._id, userId: user._id })
+        });
+        socketRef.current.emit('seenMessage', { conversationId: chatUser._id, senderId: chatUser.userId });
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    handleSeenMessages();
+  }, [chatUser?._id]);
+
+
+  useEffect(() => {
+    if (!chatUser?._id) return;
     const fetchMessage = async () => {
       const res = await fetch('/api/message/messages', {
         method: 'POST',
@@ -322,11 +340,12 @@ export default function Chat() {
     if (!lastActiveAt) return "Offline";
     const now = moment();
     const last = moment(lastActiveAt);
+    const diffSec = now.diff(last, "seconds");
     const diffMinutes = now.diff(last, "minutes");
     const diffHours = now.diff(last, "hours");
     const diffDays = now.diff(last, "days");
 
-    if (diffMinutes < 1) return "Active now";
+    if (diffMinutes < 1) return `Active ${diffSec} sec ago`;
     if (diffMinutes < 60) return `Active ${diffMinutes} min ago`;
     if (diffHours < 24) return `Active ${diffHours} hr ago`;
     if (diffDays < 1) return `Last seen ${last.format("h:mm A")}`;
@@ -711,8 +730,8 @@ export default function Chat() {
                       disabled={isUploading || isLoading}
                     >
                       {isUploading
-                        ? "Uploading..."
-                        : "Send"}
+                        ? "Uploading..." : isLoading ? "Sending..."
+                          : "Send"}
                     </button>
                   ) : (
                     <button
