@@ -14,7 +14,6 @@ import { io } from "socket.io-client";
 import { UserContext } from "./Provider";
 
 export default function Chat() {
-  const messageCacheRef = useRef({});
   const { user } = useContext(UserContext);
   const [allUser, setAllUser] = useState([]);
   const [history, setHistory] = useState([]);
@@ -39,6 +38,9 @@ export default function Chat() {
   const inputRef = useRef(null);
   const socketRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+
+  const messageCacheRef = useRef({});
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -159,6 +161,7 @@ export default function Chat() {
 
     const messageText = customText ?? input;
     if (!messageText && !file) return;
+    setIsLoading(true);
 
     if (file) {
       const MAX_SIZE = 20 * 1024 * 1024;
@@ -227,7 +230,6 @@ export default function Chat() {
       socketRef.current.emit("sendMessage", { message: optimisticMessage });
     }
 
-    setIsLoading(true)
     setInput("");
     setFile(null);
 
@@ -237,43 +239,33 @@ export default function Chat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newMessage: optimisticMessage }),
       });
-
-
       setIsLoading(false)
-
       const data = await res.json();
-
       if (data.saveMessage) {
-
         const realMessage = data.saveMessage;
         if (!chatUser?._id) {
           setMessages(prev => [...prev, realMessage]);
           updateMessage(realMessage);
           socketRef.current.emit("sendMessage", { message: realMessage });
-
           setChatUser(prev => ({
             ...prev,
             _id: realMessage.conversationId
           }));
         }
       }
-
     } catch (err) {
       console.error(err);
     }
   };
 
-  useEffect(() => {
-    if (!chatUser?._id) {
-      setMessages([]);
-      return;
-    }
 
+  useEffect(() => {
+    if (!chatUser?._id) return;
     const fetchMessage = async () => {
       const res = await fetch('/api/message/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId: chatUser._id, })
+        body: JSON.stringify({ conversationId: chatUser._id })
       });
 
       const data = await res.json();
@@ -281,8 +273,10 @@ export default function Chat() {
         setMessages(data.messages);
       }
     };
+
     fetchMessage();
   }, [chatUser?._id]);
+
 
 
   useEffect(() => {
@@ -308,7 +302,7 @@ export default function Chat() {
     };
 
     fetchHistory();
-  }, [allUser, user?._id, chatUser]);
+  }, [user?._id, chatUser]);
 
 
   useEffect(() => {
