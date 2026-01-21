@@ -1,4 +1,5 @@
 import { getCollection } from "@/lib/mongoclient";
+import History from "@/models/History";
 import Message from "@/models/Message";
 import { ObjectId } from "mongodb";
 
@@ -16,6 +17,11 @@ export default async function handler(req, res) {
                 seen: false,
             },
             { $set: { seen: true, seenAt: new Date() } }
+        );
+
+        await History.updateOne(
+            { _id: new ObjectId(conversationId) },
+            { $set: { [`unreadCount.${userId}`]: 0 } }
         );
 
 

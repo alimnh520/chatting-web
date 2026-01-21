@@ -87,6 +87,19 @@ export default function Chat() {
         updateMessage(msg);
       });
 
+      socketRef.current.on("seenMessage", ({ conversationId }) => {
+        setMessages(prev => prev.map(m =>
+          m.conversationId === conversationId ? { ...m, seen: true, seenAt: new Date() } : m
+        ));
+
+        setHistory(prev => prev.map(h =>
+          h._id === conversationId
+            ? { ...h, unreadCount: { ...h.unreadCount, [user._id]: 0 } }
+            : h
+        ));
+      });
+
+
       socketRef.current.on("online-users", (users) => {
         setOnlineUsers(users);
       });
@@ -606,7 +619,7 @@ export default function Chat() {
                 const showAvatar =
                   isSender &&
                   msg.seen &&
-                  index === lastReadIndex;
+                  index === messages.length - 1;
                 return (
                   <div key={msg._id} className={`mb-2 flex ${isSender ? "justify-end" : "justify-start"}`}>
                     <div className="flex flex-col items-end">
