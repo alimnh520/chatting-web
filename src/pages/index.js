@@ -84,30 +84,14 @@ export default function Chat() {
     socketRef.current.on("receiveMessage", (msg) => {
       setMessages(prev => [...prev, msg]);
       updateMessage(msg);
-
-      if (msg.conversationId === chatUser?._id) {
-        socketRef.current.emit("seenMessage", {
-          conversationId: msg.conversationId,
-          senderId: msg.senderId
-        });
-
-        fetch("/api/message/seen", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            conversationId: msg.conversationId,
-            userId: user._id
-          })
-        });
-      }
     });
-
 
     socketRef.current.on("online-users", (users) => {
       setOnlineUsers(users);
     });
 
     socketRef.current.on("seenMessage", ({ conversationId }) => {
+
       setMessages(prev =>
         prev.map(m =>
           m.conversationId?.toString() === conversationId?.toString()
@@ -130,6 +114,7 @@ export default function Chat() {
       socketRef.current = null;
     };
   }, [user?._id]);
+
 
 
 
@@ -289,6 +274,12 @@ export default function Chat() {
 
   useEffect(() => {
     if (!chatUser?._id) return;
+    if (!socketRef.current) return;
+
+    socketRef.current.emit('seenMessage', {
+      conversationId: chatUser._id,
+      senderId: chatUser.userId
+    });
 
     const handleSeenMessages = async () => {
       await fetch('/api/message/seen', {
@@ -299,15 +290,11 @@ export default function Chat() {
           userId: user._id
         })
       });
-
-      socketRef.current.emit('seenMessage', {
-        conversationId: chatUser._id,
-        senderId: chatUser.userId
-      });
     };
 
     handleSeenMessages();
-  }, [chatUser?._id]);
+  }, [chatUser?._id, socketRef.current]);
+
 
 
 
