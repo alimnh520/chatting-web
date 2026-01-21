@@ -49,7 +49,7 @@ export default function handler(req, res) {
             socket.on("seenMessage", ({ conversationId, senderId }) => {
                 io.to(senderId).emit("seenMessage", { conversationId });
             });
-0
+
             socket.on("typing", ({ from, to }) => {
                 io.to(to).emit("user-typing", { from });
             });

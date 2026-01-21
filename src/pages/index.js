@@ -77,49 +77,59 @@ export default function Chat() {
   useEffect(() => {
     if (!user?._id) return;
 
-    const setupSocket = async () => {
-      socketRef.current = io({ path: "/api/socket" });
+    socketRef.current = io({ path: "/api/socket" });
 
-      socketRef.current.emit("join", { userId: user._id });
+    socketRef.current.emit("join", { userId: user._id });
 
-      socketRef.current.on("receiveMessage", async (msg) => {
-        setMessages(prev => [...prev, msg]);
-        updateMessage(msg);
-      });
+    socketRef.current.on("receiveMessage", (msg) => {
+      setMessages(prev => [...prev, msg]);
+      updateMessage(msg);
+
+      if (msg.conversationId === chatUser?._id) {
+        socketRef.current.emit("seenMessage", {
+          conversationId: msg.conversationId,
+          senderId: msg.senderId
+        });
+
+        fetch("/api/message/seen", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            conversationId: msg.conversationId,
+            userId: user._id
+          })
+        });
+      }
+    });
 
 
+    socketRef.current.on("online-users", (users) => {
+      setOnlineUsers(users);
+    });
 
+    socketRef.current.on("seenMessage", ({ conversationId }) => {
+      setMessages(prev =>
+        prev.map(m =>
+          m.conversationId?.toString() === conversationId?.toString()
+            ? { ...m, seen: true, seenAt: new Date() }
+            : m
+        )
+      );
 
-      socketRef.current.on("online-users", (users) => {
-        setOnlineUsers(users);
-      });
-    };
-
-    setupSocket();
+      setHistory(prev =>
+        prev.map(h =>
+          h._id?.toString() === conversationId?.toString()
+            ? { ...h, unreadCount: { ...h.unreadCount, [user._id]: 0 } }
+            : h
+        )
+      );
+    });
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
+      socketRef.current.disconnect();
+      socketRef.current = null;
     };
   }, [user?._id]);
-
-  useEffect(() => {
-    socketRef.current = io({ path: "/api/socket" });
-    socketRef.current.on("seenMessage", ({ conversationId }) => {
-      setMessages(prev => prev.map(m =>
-        m.conversationId === conversationId ? { ...m, seen: true, seenAt: new Date() } : m
-      ));
-
-      setHistory(prev => prev.map(h =>
-        h._id === conversationId
-          ? { ...h, unreadCount: { ...h.unreadCount, [user._id]: 0 } }
-          : h
-      ));
-    });
-  }, [messages, history, user?._id]);
-
 
 
 
@@ -279,20 +289,26 @@ export default function Chat() {
 
   useEffect(() => {
     if (!chatUser?._id) return;
+
     const handleSeenMessages = async () => {
-      try {
-        await fetch('/api/message/seen', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ conversationId: chatUser._id, userId: user._id })
-        });
-        socketRef.current.emit('seenMessage', { conversationId: chatUser._id, senderId: chatUser.userId });
-      } catch (err) {
-        console.error(err);
-      }
+      await fetch('/api/message/seen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId: chatUser._id,
+          userId: user._id
+        })
+      });
+
+      socketRef.current.emit('seenMessage', {
+        conversationId: chatUser._id,
+        senderId: chatUser.userId
+      });
     };
+
     handleSeenMessages();
-  }, [chatUser?._id, messages, history]);
+  }, [chatUser?._id]);
+
 
 
   useEffect(() => {
