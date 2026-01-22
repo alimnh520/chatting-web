@@ -18,8 +18,9 @@ export default async function handler(req, res) {
             seen,
             createdAt,
         } = newMessage;
+        
 
-        if (!messageId || !senderId || !receiverId) {
+        if (!conversationId || !messageId || !senderId || !receiverId) {
             return res.status(400).json({ success: false, message: "Missing fields" });
         }
 
@@ -29,14 +30,10 @@ export default async function handler(req, res) {
             participants: { $all: [senderId, receiverId] },
         });
 
-        let finalConversationId = conversation?.conversationId || conversationId;
-
         if (!conversation) {
-            finalConversationId = conversationId || Date.now().toString();
-
             conversation = new History({
                 participants: [senderId, receiverId],
-                conversationId: finalConversationId,
+                conversationId,
                 unreadCount: { [receiverId]: 1 },
                 lastMessage: text || (file_url ? "📷 Image/Video" : ""),
                 lastMessageAt: createdAt || new Date(),
@@ -60,8 +57,9 @@ export default async function handler(req, res) {
             );
         }
 
+
         const saveMessage = new Message({
-            conversationId: finalConversationId,
+            conversationId,
             messageId,
             senderId,
             receiverId,
@@ -78,7 +76,6 @@ export default async function handler(req, res) {
         return res.status(200).json({
             success: true,
             saveMessage,
-            conversationId: finalConversationId,
         });
     } catch (err) {
         console.error("SEND MESSAGE ERROR:", err);

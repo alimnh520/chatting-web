@@ -254,28 +254,28 @@ export default function Chat() {
   };
 
 
-  useEffect(() => {
-    if (!chatUser?._id) return;
-    if (!socketRef.current) return;
+  // useEffect(() => {
+  //   if (!chatUser?._id) return;
+  //   if (!socketRef.current) return;
 
-    socketRef.current.emit('seenMessage', {
-      conversationId: chatUser._id,
-      senderId: chatUser.userId
-    });
+  //   socketRef.current.emit('seenMessage', {
+  //     conversationId: chatUser._id,
+  //     senderId: chatUser.userId
+  //   });
 
-    const handleSeenMessages = async () => {
-      await fetch('/api/message/seen', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conversationId: chatUser._id,
-          userId: user._id
-        })
-      });
-    };
+  //   const handleSeenMessages = async () => {
+  //     await fetch('/api/message/seen', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         conversationId: chatUser._id,
+  //         userId: user._id
+  //       })
+  //     });
+  //   };
 
-    handleSeenMessages();
-  }, [chatUser?._id, socketRef.current]);
+  //   handleSeenMessages();
+  // }, [chatUser?._id, socketRef.current]);
 
 
 
@@ -365,6 +365,7 @@ export default function Chat() {
   );
 
   console.log(chatUser);
+  console.log(messages);
 
 
 
