@@ -283,13 +283,6 @@ export default function Chat() {
 
 
   useEffect(() => {
-    if (loadMessages) {
-      setMessages([])
-    }
-  }, [loadMessages])
-
-
-  useEffect(() => {
     if (!chatUser?._id) return;
     setLoadMessages(true);
 
@@ -311,7 +304,7 @@ export default function Chat() {
 
         const data = await res.json();
         if (data.success) {
-          messagesCache.current[convId] = data.messages; // cache-এ রাখলাম
+          messagesCache.current[convId] = data.messages;
           setMessages(data.messages);
         }
       } catch (err) {
@@ -444,6 +437,7 @@ export default function Chat() {
                     {filteredUsers?.filter(self => self._id !== user?._id).map(u => (
                       <div key={u._id} className="flex bg-gray-200 items-center gap-3 p-2 rounded-xl hover:bg-gray-100 cursor-pointer"
                         onClick={() => {
+                          setMessages([])
                           const findHistory = history.find(h => h.participants.includes(u._id) && h.participants.includes(user._id));
                           if (findHistory) {
                             setChatUser(findHistory);
@@ -508,6 +502,7 @@ export default function Chat() {
                   key={conv._id}
                   className={`w-full flex items-center gap-3 border-b border-b-gray-100 px-4 py-3 text-left hover:bg-indigo-50 ${conv.userId === chatUser?.userId ? "bg-indigo-50" : ""}`}
                   onClick={() => {
+                    setMessages([])
                     const findHistory = history.find(h => h.participants.includes(conv.userId) && h.participants.includes(user._id));
                     if (findHistory) {
                       setChatUser(findHistory);
@@ -579,8 +574,25 @@ export default function Chat() {
                   </div>
 
                   {conv.unreadCount?.[user._id] > 0 && (
-                    <span className="ml-auto ...">{conv.unreadCount[user._id]}</span>
+                    <span className="
+    ml-auto 
+    min-w-5 
+    h-5 
+    px-1
+    flex 
+    items-center 
+    justify-center 
+    rounded-full 
+    bg-linear-to-r from-red-500 to-pink-500
+    text-white 
+    text-[11px] 
+    font-bold 
+    shadow-md
+  ">
+                      {conv.unreadCount[user._id] > 99 ? "99+" : conv.unreadCount[user._id]}
+                    </span>
                   )}
+
 
                 </button>
               );
