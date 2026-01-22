@@ -152,7 +152,7 @@ export default function Chat() {
 
     socketRef.current.on("user-typing", ({ from }) => {
       if (chatUser && from === chatUser.userId) {
-        setIsTyping(true);
+        setIsTyping(true); // শুধু অন্য ইউজারের জন্য
       }
     });
 
@@ -161,6 +161,7 @@ export default function Chat() {
         setIsTyping(false);
       }
     });
+
 
 
 
@@ -374,19 +375,14 @@ export default function Chat() {
 
     if (!socketRef.current || !chatUser) return;
 
-    if (!isTyping) {
-      setIsTyping(true);
-      socketRef.current.emit("typing", { from: user._id, to: chatUser.userId });
-    }
-
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
     typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
       socketRef.current.emit("stop-typing", { from: user._id, to: chatUser.userId });
     }, 1000);
-  };
 
+    socketRef.current.emit("typing", { from: user._id, to: chatUser.userId });
+  };
 
 
 
