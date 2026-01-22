@@ -34,6 +34,9 @@ export default function Chat() {
   const [isUploading, setIsUploading] = useState(false);
 
   const [isTyping, setIsTyping] = useState(false);
+  const [deleteBtn, setDeleteBtn] = useState(false);
+  const [deleteMsg, setDeleteMsg] = useState(false);
+  const [msgId, setMsgId] = useState('');
 
   const inputRef = useRef(null);
   const socketRef = useRef(null);
@@ -104,6 +107,11 @@ export default function Chat() {
       );
     });
 
+    socketRef.current.on("messageDeleted", ({ messageId }) => {
+      setMessages(prev => prev.filter(m => m.messageId !== messageId));
+    });
+
+
     socketRef.current.on("user-typing", ({ from }) => {
       if (from === chatUser?.userId) setIsTyping(true);
     });
@@ -117,6 +125,7 @@ export default function Chat() {
     });
 
     return () => {
+      socketRef.current.off("messageDeleted");
       socketRef.current.off("user-typing");
       socketRef.current.off("user-stop-typing");
       socketRef.current.disconnect();
@@ -256,6 +265,7 @@ export default function Chat() {
       text: messageText,
       file_url,
       file_id,
+      file_type: '',
       seen: false,
       createdAt: new Date(),
     };
@@ -277,6 +287,37 @@ export default function Chat() {
       console.error(err);
     }
   };
+
+
+  // delete message
+
+  const handleDeleteMessage = async () => {
+    if (!msgId) return;
+
+    try {
+      const res = await fetch("/api/message/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ msg: msgId, userId: user._id }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setMessages(prev => prev.filter(m => m.messageId !== msgId.messageId));
+
+        updateMessage({ ...messages.find(m => m.messageId === msgId.messageId), text: "Message deleted" });
+
+        socketRef.current.emit("deleteMessage", { messageId: msgId.messageId, conversationId: chatUser.conversationId });
+        setDeleteMsg(false);
+        setMsgId('');
+      } else {
+        alert("Failed to delete message");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
 
 
   // typing indicator
@@ -338,6 +379,12 @@ export default function Chat() {
 
 
   // message fetching
+
+  useEffect(() => {
+    if (loadMessages) {
+      setMessages([]);
+    }
+  }, [loadMessages]);
 
   useEffect(() => {
     if (!chatUser?._id) return;
@@ -467,6 +514,8 @@ export default function Chat() {
   const filteredUsers = allUser?.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
+  console.log(msgId);
+
 
 
   return (
@@ -504,7 +553,6 @@ export default function Chat() {
                     {filteredUsers?.filter(self => self._id !== user?._id).map(u => (
                       <div key={u._id} className="flex bg-gray-200 items-center gap-3 p-2 rounded-xl hover:bg-gray-100 cursor-pointer"
                         onClick={() => {
-                          setMessages([])
                           const findHistory = history.find(h => h.participants.includes(u._id) && h.participants.includes(user._id));
                           if (findHistory) {
                             setChatUser(findHistory);
@@ -569,7 +617,6 @@ export default function Chat() {
                   key={conv._id}
                   className={`w-full flex items-center gap-3 border-b border-b-gray-100 px-4 py-3 text-left hover:bg-indigo-50 ${conv.userId === chatUser?.userId ? "bg-indigo-50" : ""}`}
                   onClick={() => {
-                    setMessages([])
                     const findHistory = history.find(h => h.participants.includes(conv.userId) && h.participants.includes(user._id));
                     if (findHistory) {
                       setChatUser(findHistory);
@@ -732,11 +779,24 @@ export default function Chat() {
                   msg.seen &&
                   index === messages.length - 1;
                 return (
-                  <div key={msg._id} className={`mb-2 flex ${isSender ? "justify-end" : "justify-start"}`}>
-                    <div className="flex flex-col items-end">
+                  <div key={msg._id} className={`mb-2 relative flex ${isSender ? "justify-end" : "justify-start"}`} onClick={() => {
+                    if (deleteBtn) {
+                      setDeleteBtn(false);
+                    }
+                  }}>
+                    <div className="flex flex-col items-end" onClick={() => {
+                      if (deleteBtn) {
+                        setDeleteBtn(false);
+                      }
+                    }}>
                       <div className="flex items-start justify-start gap-1">
+                        {isSender && deleteBtn && (msgId.messageId === msg.messageId) && <button className="self-center mr-2 text-xl text-white w-8 h-8 flex items-center justify-center bg-red-600 rounded-full" onClick={() => setDeleteMsg(true)}><MdDeleteForever /></button>}
                         {!isSender && <img src={chatUser.image} alt="user" className="w-5 h-5 mt-px rounded-full object-center object-cover" />}
-                        <div className={`rounded-2xl px-3 py-2 text-sm shadow-sm ${isSender ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-900"}`}>
+                        <div className={`rounded-2xl px-3 py-2 text-sm shadow-sm ${isSender ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-900"}`} onClick={() => {
+                          setMsgId(msg);
+                          setDeleteBtn(true);
+                        }}>
+
                           {msg.text && <p className="wrap-break-word max-w-64 sm:max-w-96">{msg.text}</p>}
                           {msg.file_url && (() => {
                             const isVideo = /\.(mp4|webm|mov)$/i.test(msg.file_url);
@@ -777,6 +837,9 @@ export default function Chat() {
                         <span className="text-[10px] font-semibold">Unread</span>
                       )}
                     </div>
+
+
+
                   </div>
                 );
               })}
@@ -794,6 +857,29 @@ export default function Chat() {
                   </span>
                 </div>
               )}
+
+              {deleteMsg && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center text-black bg-opacity-50 top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2">
+                  <div className="bg-gray-600 p-6 rounded-xl shadow-lg w-80 text-center">
+                    <h2 className="text-lg font-semibold mb-4">Delete this message?</h2>
+                    <div className="flex justify-between gap-4">
+                      <button
+                        className="flex-1 py-2 rounded-lg bg-gray-200 hover:bg-gray-300"
+                        onClick={() => setDeleteMsg(false)}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700"
+                        onClick={() => handleDeleteMessage()}
+                      >
+                        Confirm
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
 
             {/* Composer */}

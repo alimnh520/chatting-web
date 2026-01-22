@@ -51,12 +51,7 @@ const MessageSchema = new mongoose.Schema(
             type: String,
             default: null,
         },
-
-        file_type: {
-            type: String,
-            default: null,
-        },
-
+        
         seen: {
             type: Boolean,
             default: false,

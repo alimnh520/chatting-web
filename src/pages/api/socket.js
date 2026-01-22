@@ -12,7 +12,7 @@ const onlineUsers = new Map();
 
 export default function handler(req, res) {
     if (!res.socket.server.io) {
-        
+
         console.log("🟢 Socket server started");
 
         const io = new Server(res.socket.server, {
@@ -49,6 +49,11 @@ export default function handler(req, res) {
             socket.on("seenMessage", ({ conversationId, senderId }) => {
                 io.to(senderId).emit("seenMessage", { conversationId });
             });
+
+            socket.on("deleteMessage", ({ messageId, conversationId }) => {
+                io.to(conversationId).emit("messageDeleted", { messageId });
+            });
+
 
             socket.on("typing", ({ from, to }) => {
                 io.to(to).emit("user-typing", { from });
