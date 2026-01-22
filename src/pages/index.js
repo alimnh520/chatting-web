@@ -151,18 +151,17 @@ export default function Chat() {
 
 
     socketRef.current.on("user-typing", ({ from }) => {
-      if (!chatUser) return;
-      if (from !== user._id && (from === chatUser.userId || from === chatUser._id)) {
+      if (from !== user._id && chatUser && (from === chatUser.userId || from === chatUser._id)) {
         setIsTyping(true);
       }
     });
 
     socketRef.current.on("user-stop-typing", ({ from }) => {
-      if (!chatUser) return;
-      if (from !== user._id && (from === chatUser.userId || from === chatUser._id)) {
+      if (from !== user._id && chatUser && (from === chatUser.userId || from === chatUser._id)) {
         setIsTyping(false);
       }
     });
+
 
     socketRef.current.on("online-users", (users) => {
       setOnlineUsers(users);
@@ -386,6 +385,7 @@ export default function Chat() {
       socketRef.current.emit("stop-typing", { from: user._id, to: chatUser.userId });
     }, 1000);
   };
+
 
 
 
