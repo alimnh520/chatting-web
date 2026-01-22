@@ -151,16 +151,17 @@ export default function Chat() {
 
 
     socketRef.current.on("user-typing", ({ from }) => {
-      if (from !== user._id && chatUser && (from === chatUser.userId || from === chatUser._id)) {
+      if (chatUser && from === chatUser.userId) {
         setIsTyping(true);
       }
     });
 
     socketRef.current.on("user-stop-typing", ({ from }) => {
-      if (from !== user._id && chatUser && (from === chatUser.userId || from === chatUser._id)) {
+      if (chatUser && from === chatUser.userId) {
         setIsTyping(false);
       }
     });
+
 
 
     socketRef.current.on("online-users", (users) => {
