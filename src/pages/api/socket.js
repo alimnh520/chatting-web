@@ -51,8 +51,14 @@ export default function handler(req, res) {
             });
 
             socket.on("deleteMessage", ({ messageId, conversationId }) => {
-                io.to(conversationId).emit("messageDeleted", { messageId });
+                const conversation = getConversationUsers(conversationId);
+                conversation.forEach(userId => {
+                    if (userId !== socket.userId) {
+                        io.to(userId).emit("messageDeleted", { messageId, conversationId });
+                    }
+                });
             });
+
 
 
             socket.on("typing", ({ from, to }) => {

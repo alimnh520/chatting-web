@@ -113,11 +113,13 @@ export default function Chat() {
 
 
     socketRef.current.on("user-typing", ({ from }) => {
-      if (from === chatUser?.userId) setIsTyping(true);
+      if (!chatUser) return;
+      if (from === chatUser.userId || from === chatUser._id) setIsTyping(true);
     });
 
     socketRef.current.on("user-stop-typing", ({ from }) => {
-      if (from === chatUser?.userId) setIsTyping(false);
+      if (!chatUser) return;
+      if (from === chatUser.userId || from === chatUser._id) setIsTyping(false);
     });
 
     socketRef.current.on("online-users", (users) => {
@@ -294,6 +296,14 @@ export default function Chat() {
   const handleDeleteMessage = async () => {
     if (!msgId) return;
 
+    setMessages(prev => prev.filter(m => m.messageId !== msgId.messageId));
+
+    updateMessage({ ...messages.find(m => m.messageId === msgId.messageId), text: "Message deleted" });
+
+    socketRef.current.emit("deleteMessage", { messageId: msgId.messageId, conversationId: chatUser.conversationId });
+    setDeleteMsg(false);
+    setMsgId('');
+
     try {
       const res = await fetch("/api/message/delete", {
         method: "POST",
@@ -301,18 +311,6 @@ export default function Chat() {
         body: JSON.stringify({ msg: msgId, userId: user._id }),
       });
 
-      const data = await res.json();
-      if (data.success) {
-        setMessages(prev => prev.filter(m => m.messageId !== msgId.messageId));
-
-        updateMessage({ ...messages.find(m => m.messageId === msgId.messageId), text: "Message deleted" });
-
-        socketRef.current.emit("deleteMessage", { messageId: msgId.messageId, conversationId: chatUser.conversationId });
-        setDeleteMsg(false);
-        setMsgId('');
-      } else {
-        alert("Failed to delete message");
-      }
     } catch (err) {
       console.error(err);
     }
