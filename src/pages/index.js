@@ -93,6 +93,15 @@ export default function Chat() {
       updateMessage(msg);
     });
 
+    socketRef.current.on("seenMessage", ({ conversationId }) => {
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.conversationId === conversationId && msg.senderId === user._id
+            ? { ...msg, seen: true }
+            : msg
+        )
+      );
+    });
 
     socketRef.current.on("online-users", (users) => {
       setOnlineUsers(users);
@@ -102,7 +111,9 @@ export default function Chat() {
       socketRef.current.disconnect();
       socketRef.current = null;
     };
-  }, [user?._id]);
+
+  }, [user?._id, chatUser?.conversationId]);
+
 
 
   const updateMessage = (msg) => {
@@ -168,7 +179,6 @@ export default function Chat() {
       return [newConv, ...prevList];
     });
   };
-
 
 
   const handleSendMessage = async (customText = null) => {
@@ -258,29 +268,41 @@ export default function Chat() {
   };
 
 
-  useEffect(() => {
-    if (!chatUser?._id) return;
-    if (!socketRef.current) return;
+  // message seen 
 
-    socketRef.current.emit('seenMessage', {
-      conversationId: chatUser._id,
+  const markSeen = async () => {
+    if (!socketRef.current || !chatUser) return;
+
+    socketRef.current.emit("seenMessage", {
+      conversationId: chatUser.conversationId,
       senderId: chatUser.userId
     });
 
-    const handleSeenMessages = async () => {
-      await fetch('/api/message/seen', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conversationId: chatUser._id,
-          userId: user._id
-        })
-      });
-    };
+    await fetch("/api/message/seen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        conversationId: chatUser.conversationId,
+        userId: user._id
+      })
+    });
+  };
 
-    handleSeenMessages();
-  }, [chatUser?._id]);
+  useEffect(() => {
+    if (!chatUser?.conversationId) return;
+    if (messages.length === 0) return;
 
+    const lastMsg = messages[messages.length - 1];
+
+    if (lastMsg.seen) return;
+
+    if (lastMsg.senderId === chatUser.userId) {
+      markSeen();
+    }
+  }, [messages]);
+
+
+  // message fetching
 
   useEffect(() => {
     if (!chatUser?._id) return;
@@ -318,6 +340,7 @@ export default function Chat() {
   }, [chatUser?._id]);
 
 
+  // history fetching
 
   useEffect(() => {
     if (!user?._id) return;
@@ -343,6 +366,7 @@ export default function Chat() {
   }, [user?._id]);
 
 
+  // all users fetching
 
   useEffect(() => {
     const fetchAllUsers = async () => {

@@ -1,7 +1,5 @@
-import { getCollection } from "@/lib/mongoclient";
 import History from "@/models/History";
 import Message from "@/models/Message";
-import { ObjectId } from "mongodb";
 
 export default async function handler(req, res) {
     if (req.method !== "POST") return res.status(405).json({ success: false });
@@ -12,7 +10,7 @@ export default async function handler(req, res) {
     try {
         await Message.updateMany(
             {
-                conversationId: new ObjectId(conversationId),
+                conversationId,
                 receiverId: userId,
                 seen: false,
             },
@@ -20,7 +18,7 @@ export default async function handler(req, res) {
         );
 
         await History.updateOne(
-            { _id: new ObjectId(conversationId) },
+            { conversationId },
             { $set: { [`unreadCount.${userId}`]: 0 } }
         );
 
