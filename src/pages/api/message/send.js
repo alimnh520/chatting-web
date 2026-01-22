@@ -35,18 +35,18 @@ export default async function handler(req, res) {
                 participants: [senderId, receiverId],
                 conversationId,
                 unreadCount: { [receiverId]: 1 },
-                lastMessage: text || (file_url ? "📷 Image/Video" : ""),
+                lastMessage: text || (file_url ? "📷 Attachment" : ""),
                 lastMessageAt: createdAt || new Date(),
                 lastMessageSenderId: senderId,
             });
 
-            // await conversation.save();
+            await conversation.save();
         } else {
             await History.updateOne(
                 { _id: conversation._id },
                 {
                     $set: {
-                        lastMessage: text || (file_url ? "📷 Image/Video" : ""),
+                        lastMessage: text || (file_url ? "📷 Attachment" : ""),
                         lastMessageAt: createdAt || new Date(),
                         lastMessageSenderId: senderId,
                     },
@@ -71,7 +71,7 @@ export default async function handler(req, res) {
             createdAt: createdAt || new Date(),
         });
 
-        // await saveMessage.save();
+        await saveMessage.save();
 
         return res.status(200).json({
             success: true,

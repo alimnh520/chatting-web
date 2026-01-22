@@ -27,11 +27,9 @@ export default function Chat() {
   const [isMobile, setIsMobile] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
 
-
   const [input, setInput] = useState("");
   const [file, setFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   const [isTyping, setIsTyping] = useState(false);
 
@@ -170,13 +168,6 @@ export default function Chat() {
     const messageText = customText ?? input;
     if (!messageText && !file) return;
 
-    let tempFileURL = null;
-    if (file) {
-      tempFileURL = URL.createObjectURL(file);
-    }
-
-    setIsLoading(true);
-
     if (file) {
       const MAX_SIZE = 20 * 1024 * 1024;
       if (file.size > MAX_SIZE) {
@@ -201,33 +192,31 @@ export default function Chat() {
     let file_url = null;
     let file_id = null;
 
-    // if (file) {
+    if (file) {
 
-    //   setIsUploading(true);
+      setIsUploading(true);
 
-    //   const formData = new FormData();
-    //   formData.append("file", file);
-    //   formData.append("upload_preset", "form-submit");
-    //   formData.append("folder", "user");
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "form-submit");
+      formData.append("folder", "user");
 
-    //   const response = await fetch(
-    //     `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUD_NAME}/auto/upload`,
-    //     { method: "POST", body: formData }
-    //   );
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUD_NAME}/auto/upload`,
+        { method: "POST", body: formData }
+      );
 
-    //   const uploadResult = await response.json();
-    //   setIsUploading(false);
+      const uploadResult = await response.json();
+      setIsUploading(false);
 
-    //   if (!uploadResult.secure_url) {
-    //     alert("Upload failed");
-    //     return;
-    //   }
+      if (!uploadResult.secure_url) {
+        alert("Upload failed");
+        return;
+      }
 
-    //   file_url = uploadResult.secure_url;
-    //   file_id = uploadResult.public_id;
-    // }
-
-    const isVideoFile = file?.type.startsWith("video/");
+      file_url = uploadResult.secure_url;
+      file_id = uploadResult.public_id;
+    }
 
     const optimisticMessage = {
       _id: Date.now().toString(),
@@ -236,9 +225,8 @@ export default function Chat() {
       senderId: user._id,
       receiverId: chatUser?.userId,
       text: messageText,
-      file_url: tempFileURL,
+      file_url,
       file_id,
-      file_type: isVideoFile ? "video" : "image",
       seen: false,
       createdAt: new Date(),
     };
@@ -255,7 +243,6 @@ export default function Chat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newMessage: optimisticMessage }),
       });
-      setIsLoading(false);
 
     } catch (err) {
       console.error(err);
@@ -363,6 +350,22 @@ export default function Chat() {
     return "Offline";
   };
 
+  const historyActive = (lastActiveAt) => {
+    if (!lastActiveAt) return "";
+    const now = moment();
+    const last = moment(lastActiveAt);
+    const diffSec = now.diff(last, "seconds");
+    const diffMinutes = now.diff(last, "minutes");
+    const diffHours = now.diff(last, "hours");
+    const diffDays = now.diff(last, "days");
+
+    if (diffMinutes < 1) return `${diffSec}s`;
+    if (diffMinutes < 60) return `${diffMinutes}m`;
+    if (diffHours < 24) return `${diffHours}h`;
+
+    return "";
+  };
+
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -372,11 +375,6 @@ export default function Chat() {
   const filteredUsers = allUser?.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
-
-  console.log(chatUser);
-  console.log(messages);
-
-
 
   return (
     <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
@@ -513,7 +511,7 @@ export default function Chat() {
                           className={`bg-green-600 text-[10px] rounded-full text-white inline-flex items-center justify-center ${lastActive(conv.lastActiveAt) ? "px-1" : ""
                             }`}
                         >
-                          {lastActive(conv.lastActiveAt)}
+                          {historyActive(conv.lastActiveAt)}
                         </span>
                       )}
                     </div>
@@ -628,23 +626,29 @@ export default function Chat() {
                         {!isSender && <img src={chatUser.image} alt="user" className="w-5 h-5 mt-px rounded-full object-center object-cover" />}
                         <div className={`rounded-2xl px-3 py-2 text-sm shadow-sm ${isSender ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-900"}`}>
                           {msg.text && <p className="wrap-break-word max-w-64 sm:max-w-96">{msg.text}</p>}
-                          {msg.file_url && (
-                            msg.file_type === "video" ? (
-                              <video
-                                src={msg.file_url}
-                                controls
-                                className="mt-2 w-64 sm:w-96 max-w-xs rounded-lg"
-                              />
-                            ) : (
-                              <a href={msg.file_url} target="_blank">
-                                <img
+                          {msg.file_url && (() => {
+                            const isVideo = /\.(mp4|webm|mov)$/i.test(msg.file_url);
+                            if (isVideo) {
+                              return (
+                                <video
                                   src={msg.file_url}
-                                  alt="sent"
+                                  controls
                                   className="mt-2 w-64 sm:w-96 max-w-xs rounded-lg"
                                 />
-                              </a>
-                            )
-                          )}
+                              );
+                            } else {
+                              return (
+                                <a href={msg.file_url} target="_blank">
+                                  <img
+                                    src={msg.file_url}
+                                    alt="sent"
+                                    className="mt-2 w-64 sm:w-96 max-w-xs rounded-lg"
+                                  />
+                                </a>
+                              );
+                            }
+                          })()}
+
                           <div className="mt-1 text-[10px] select-none flex justify-between items-center">
                             <span>{moment(msg.createdAt).format("h:mm A")}</span>
                           </div>
@@ -735,11 +739,11 @@ export default function Chat() {
                         inputRef.current?.focus({ preventScroll: true });
                         handleSendMessage();
                       }}
-                      disabled={isUploading || isLoading}
+                      disabled={isUploading}
                     >
                       {isUploading
-                        ? "Uploading..." : isLoading ? "Sending..."
-                          : "Send"}
+                        ? "Uploading..."
+                        : "Send"}
                     </button>
                   ) : (
                     <button
