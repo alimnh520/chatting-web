@@ -9,6 +9,7 @@ import Link from "next/link";
 import { FaHeart } from "react-icons/fa";
 import { IoCall } from "react-icons/io5";
 import { IoVideocam } from "react-icons/io5";
+import { MdDeleteForever } from "react-icons/md";
 
 import { io } from "socket.io-client";
 import { UserContext } from "./Provider";
@@ -103,11 +104,21 @@ export default function Chat() {
       );
     });
 
+    socketRef.current.on("user-typing", ({ from }) => {
+      if (from === chatUser?.userId) setIsTyping(true);
+    });
+
+    socketRef.current.on("user-stop-typing", ({ from }) => {
+      if (from === chatUser?.userId) setIsTyping(false);
+    });
+
     socketRef.current.on("online-users", (users) => {
       setOnlineUsers(users);
     });
 
     return () => {
+      socketRef.current.off("user-typing");
+      socketRef.current.off("user-stop-typing");
       socketRef.current.disconnect();
       socketRef.current = null;
     };
@@ -266,6 +277,30 @@ export default function Chat() {
       console.error(err);
     }
   };
+
+
+  // typing indicator
+
+  const typingTimeoutRef = useRef(null);
+
+  const handleTyping = (e) => {
+    setInput(e.target.value);
+
+    if (!socketRef.current || !chatUser) return;
+
+    if (!isTyping) {
+      setIsTyping(true);
+      socketRef.current.emit("typing", { from: user._id, to: chatUser.userId });
+    }
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+      socketRef.current.emit("stop-typing", { from: user._id, to: chatUser.userId });
+    }, 1000);
+  };
+
 
 
   // message seen 
@@ -798,8 +833,9 @@ export default function Chat() {
                     value={input}
                     placeholder="Aa..."
                     className="flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none"
-                    onChange={(e) => setInput(e.target.value)}
+                    onChange={handleTyping}
                   />
+
 
                   <input
                     type="file"
