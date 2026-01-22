@@ -38,6 +38,8 @@ export default function Chat() {
   const inputRef = useRef(null);
   const socketRef = useRef(null);
 
+  const messagesCache = useRef({});
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -90,32 +92,11 @@ export default function Chat() {
       setOnlineUsers(users);
     });
 
-    socketRef.current.on("seenMessage", ({ conversationId }) => {
-
-      setMessages(prev =>
-        prev.map(m =>
-          m.conversationId?.toString() === conversationId?.toString()
-            ? { ...m, seen: true, seenAt: new Date() }
-            : m
-        )
-      );
-
-      setHistory(prev =>
-        prev.map(h =>
-          h._id?.toString() === conversationId?.toString()
-            ? { ...h, unreadCount: { ...h.unreadCount, [user._id]: 0 } }
-            : h
-        )
-      );
-    });
-
     return () => {
       socketRef.current.disconnect();
       socketRef.current = null;
     };
   }, [user?._id]);
-
-
 
 
   const updateMessage = (msg) => {
@@ -128,46 +109,60 @@ export default function Chat() {
 
     const username = otherUser?.username || otherUser?.user?.username || "Unknown";
     const image = otherUser?.image || otherUser?.user?.image || "/avatar.png";
-    const lastMessageText = msg.text || (msg.file_url ? "📷 Image/Video" : "📷 Image");
+
+    const lastMessageText =
+      msg.text || (msg.file_url ? "📷 Image/Video" : "📷 File");
 
     setHistory(prev => {
-      const index = prev.findIndex(
-        h => h.participants.includes(msg.senderId) && h.participants.includes(msg.receiverId)
+      const prevList = Array.isArray(prev) ? [...prev] : [];
+
+      const index = prevList.findIndex(h =>
+        h.participants?.includes(msg.senderId) &&
+        h.participants?.includes(msg.receiverId)
       );
 
       if (index !== -1) {
-        const updated = [...prev];
+        const old = prevList[index];
+
         const updatedConv = {
-          ...updated[index],
+          ...old,
+          conversationId: msg.conversationId || old.conversationId,
           lastMessage: lastMessageText,
           lastMessageAt: new Date(),
           lastMessageSenderId: msg.senderId,
           unreadCount: {
-            ...updated[index].unreadCount,
-            [otherUserId]: isMe
-              ? updated[index].unreadCount?.[otherUserId] || 0
-              : (updated[index].unreadCount?.[otherUserId] || 0) + 1,
+            ...old.unreadCount,
+            [user._id]: isMe
+              ? 0
+              : (old.unreadCount?.[user._id] || 0) + 1,
           },
         };
-        updated.splice(index, 1);
-        return [updatedConv, ...updated];
+
+        prevList.splice(index, 1);
+
+        return [updatedConv, ...prevList];
       }
 
       const newConv = {
+        _id: Date.now().toString(),
+        conversationId: msg.conversationId || Date.now().toString(),
         participants: [msg.senderId, msg.receiverId],
-        lastMessage: lastMessageText,
-        lastMessageAt: new Date(),
-        lastMessageSenderId: msg.senderId,
         userId: otherUserId,
         username,
         image,
         lastActiveAt: otherUser?.lastActiveAt || null,
-        unreadCount: { [otherUserId]: isMe ? 0 : 1 },
+        lastMessage: lastMessageText,
+        lastMessageAt: new Date(),
+        lastMessageSenderId: msg.senderId,
+        unreadCount: {
+          [user._id]: isMe ? 0 : 1,
+        },
       };
 
-      return [newConv, ...prev];
+      return [newConv, ...prevList];
     });
   };
+
 
 
   const handleSendMessage = async (customText = null) => {
@@ -201,6 +196,7 @@ export default function Chat() {
     let file_id = null;
 
     if (file) {
+
       setIsUploading(true);
 
       const formData = new FormData();
@@ -227,7 +223,8 @@ export default function Chat() {
 
     const optimisticMessage = {
       _id: Date.now().toString(),
-      conversationId: chatUser?._id || null,
+      conversationId: chatUser.conversationId,
+      messageId: Date.now().toString(),
       senderId: user._id,
       receiverId: chatUser?.userId,
       text: messageText,
@@ -237,14 +234,11 @@ export default function Chat() {
       createdAt: new Date(),
     };
 
-    if (chatUser?._id) {
-      setMessages(prev => [...prev, optimisticMessage]);
-      updateMessage(optimisticMessage);
-      socketRef.current.emit("sendMessage", { message: optimisticMessage });
-    }
-
     setInput("");
     setFile(null);
+    setMessages(prev => [...prev, optimisticMessage]);
+    updateMessage(optimisticMessage);
+    socketRef.current.emit("sendMessage", { message: optimisticMessage });
 
     try {
       const res = await fetch("/api/message/send", {
@@ -252,20 +246,8 @@ export default function Chat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newMessage: optimisticMessage }),
       });
-      setIsLoading(false)
-      const data = await res.json();
-      if (data.saveMessage) {
-        const realMessage = data.saveMessage;
-        if (!chatUser?._id) {
-          setMessages(prev => [...prev, realMessage]);
-          updateMessage(realMessage);
-          socketRef.current.emit("sendMessage", { message: realMessage });
-          setChatUser(prev => ({
-            ...prev,
-            _id: realMessage.conversationId
-          }));
-        }
-      }
+      setIsLoading(false);
+
     } catch (err) {
       console.error(err);
     }
@@ -304,7 +286,7 @@ export default function Chat() {
       const res = await fetch('/api/message/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId: chatUser._id })
+        body: JSON.stringify({ conversationId: chatUser.conversationId })
       });
 
       const data = await res.json();
@@ -317,9 +299,7 @@ export default function Chat() {
   }, [chatUser?._id]);
 
 
-
   useEffect(() => {
-
     if (!user?._id) return;
 
     const fetchHistory = async () => {
@@ -337,11 +317,11 @@ export default function Chat() {
       if (!chatUser && history.length > 0 && !isMobile) {
         setChatUser(history[0]);
       }
-
     };
 
     fetchHistory();
-  }, [user?._id, chatUser]);
+  }, [user?._id]);
+
 
 
   useEffect(() => {
@@ -383,6 +363,8 @@ export default function Chat() {
   const filteredUsers = allUser?.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
+
+  console.log(chatUser);
 
 
 
@@ -426,7 +408,8 @@ export default function Chat() {
                             setChatUser(findHistory);
                           } else {
                             setChatUser({
-                              _id: null,
+                              _id: Date.now().toString(),
+                              conversationId: Date.now().toString(),
                               participants: [user._id, u._id],
                               userId: u._id,
                               username: u.username,
@@ -489,7 +472,8 @@ export default function Chat() {
                       setChatUser(findHistory);
                     } else {
                       setChatUser({
-                        _id: null,
+                        _id: Date.now().toString(),
+                        conversationId: Date.now().toString(),
                         participants: [user._id, u._id],
                         userId: u._id,
                         username: u.username,
@@ -501,7 +485,6 @@ export default function Chat() {
                         unreadCount: {}
                       });
                     }
-
                     setMobileView(false);
                   }}
                 >

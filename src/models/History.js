@@ -10,6 +10,12 @@ const HistorySchema = new mongoose.Schema(
             },
         ],
 
+        conversationId: {
+            type: String,
+            ref: "Conversation",
+            default: null,
+        },
+
         lastMessage: {
             type: String,
             default: "",

@@ -7,7 +7,21 @@ export default async function handler(req, res) {
 
     try {
         const { newMessage } = req.body;
-        const { senderId, receiverId, text, file_url, file_id, seen, createdAt } = newMessage;
+        const {
+            conversationId,
+            messageId,
+            senderId,
+            receiverId,
+            text,
+            file_url,
+            file_id,
+            seen,
+            createdAt,
+        } = newMessage;
+
+        if (!messageId || !senderId || !receiverId) {
+            return res.status(400).json({ success: false, message: "Missing fields" });
+        }
 
         await connectDB();
 
@@ -15,22 +29,27 @@ export default async function handler(req, res) {
             participants: { $all: [senderId, receiverId] },
         });
 
+        let finalConversationId = conversation?.conversationId || conversationId;
+
         if (!conversation) {
+            finalConversationId = conversationId || Date.now().toString();
+
             conversation = new History({
                 participants: [senderId, receiverId],
-                unreadCount: { [receiverId]: 0 },
-                lastMessage: text || "📷 Image",
+                conversationId: finalConversationId,
+                unreadCount: { [receiverId]: 1 },
+                lastMessage: text || (file_url ? "📷 Image/Video" : ""),
                 lastMessageAt: createdAt || new Date(),
                 lastMessageSenderId: senderId,
-                createdAt: new Date(),
             });
+
             await conversation.save();
         } else {
             await History.updateOne(
                 { _id: conversation._id },
                 {
                     $set: {
-                        lastMessage: text || "📷 Image",
+                        lastMessage: text || (file_url ? "📷 Image/Video" : ""),
                         lastMessageAt: createdAt || new Date(),
                         lastMessageSenderId: senderId,
                     },
@@ -42,7 +61,8 @@ export default async function handler(req, res) {
         }
 
         const saveMessage = new Message({
-            conversationId: conversation._id,
+            conversationId: finalConversationId,
+            messageId,
             senderId,
             receiverId,
             text,
@@ -55,9 +75,13 @@ export default async function handler(req, res) {
 
         await saveMessage.save();
 
-        return res.status(200).json({ success: true, saveMessage, conversationId: conversation._id });
+        return res.status(200).json({
+            success: true,
+            saveMessage,
+            conversationId: finalConversationId,
+        });
     } catch (err) {
-        console.error(err);
+        console.error("SEND MESSAGE ERROR:", err);
         return res.status(500).json({ success: false });
     }
 }
