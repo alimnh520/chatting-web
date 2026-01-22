@@ -81,10 +81,6 @@ export default function Chat() {
   const requestNotificationPermission = async () => {
     if (!("Notification" in window)) return;
 
-    if (Notification.permission === "granted") {
-      new Notification(username, { body: text, icon: image });
-    }
-
     let permission = Notification.permission;
     if (permission === "default") {
       permission = await Notification.requestPermission();
@@ -92,6 +88,7 @@ export default function Chat() {
 
     return permission;
   };
+
 
   useEffect(() => {
     requestNotificationPermission();
@@ -114,7 +111,7 @@ export default function Chat() {
     return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
   }
 
-  
+
 
   const PUBLIC_VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_KEY;
 
