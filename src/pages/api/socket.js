@@ -25,17 +25,13 @@ export default function handler(req, res) {
         io.on("connection", (socket) => {
 
             socket.on("join", async ({ userId }) => {
+                socket.userId = userId;
                 socket.join(userId);
                 onlineUsers.set(userId, socket.id);
 
                 await User.updateOne(
                     { _id: new ObjectId(userId) },
-                    {
-                        $set: {
-                            online: true,
-                            lastActiveAt: new Date()
-                        }
-                    }
+                    { $set: { online: true, lastActiveAt: new Date() } }
                 );
 
                 io.emit("online-users", Array.from(onlineUsers.keys()));
@@ -50,15 +46,13 @@ export default function handler(req, res) {
                 io.to(senderId).emit("seenMessage", { conversationId });
             });
 
-            socket.on("deleteMessage", ({ messageId, conversationId }) => {
-                const conversation = getConversationUsers(conversationId);
-                conversation.forEach(userId => {
+            socket.on("deleteMessage", ({ messageId, conversationId, participants }) => {
+                participants.forEach(userId => {
                     if (userId !== socket.userId) {
                         io.to(userId).emit("messageDeleted", { messageId, conversationId });
                     }
                 });
             });
-
 
 
             socket.on("typing", ({ from, to }) => {

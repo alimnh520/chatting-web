@@ -114,12 +114,16 @@ export default function Chat() {
 
     socketRef.current.on("user-typing", ({ from }) => {
       if (!chatUser) return;
-      if (from === chatUser.userId || from === chatUser._id) setIsTyping(true);
+      if (from !== user._id && (from === chatUser.userId || from === chatUser._id)) {
+        setIsTyping(true);
+      }
     });
 
     socketRef.current.on("user-stop-typing", ({ from }) => {
       if (!chatUser) return;
-      if (from === chatUser.userId || from === chatUser._id) setIsTyping(false);
+      if (from !== user._id && (from === chatUser.userId || from === chatUser._id)) {
+        setIsTyping(false);
+      }
     });
 
     socketRef.current.on("online-users", (users) => {
@@ -300,7 +304,12 @@ export default function Chat() {
 
     updateMessage({ ...messages.find(m => m.messageId === msgId.messageId), text: "Message deleted" });
 
-    socketRef.current.emit("deleteMessage", { messageId: msgId.messageId, conversationId: chatUser.conversationId });
+    socketRef.current.emit("deleteMessage", {
+      messageId: msgId.messageId,
+      conversationId: chatUser.conversationId,
+      participants: chatUser.participants
+    });
+
     setDeleteMsg(false);
     setMsgId('');
 
@@ -389,6 +398,20 @@ export default function Chat() {
     setLoadMessages(true);
 
     const convId = chatUser.conversationId;
+
+    setHistory(prev =>
+      prev.map(conv =>
+        conv.conversationId === convId
+          ? {
+            ...conv,
+            unreadCount: {
+              ...conv.unreadCount,
+              [user._id]: 0
+            }
+          }
+          : conv
+      )
+    );
 
     if (messagesCache.current[convId]) {
       setLoadMessages(false);
