@@ -169,6 +169,12 @@ export default function Chat() {
 
     const messageText = customText ?? input;
     if (!messageText && !file) return;
+
+    let tempFileURL = null;
+    if (file) {
+      tempFileURL = URL.createObjectURL(file);
+    }
+
     setIsLoading(true);
 
     if (file) {
@@ -195,31 +201,33 @@ export default function Chat() {
     let file_url = null;
     let file_id = null;
 
-    if (file) {
+    // if (file) {
 
-      setIsUploading(true);
+    //   setIsUploading(true);
 
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", "form-submit");
-      formData.append("folder", "user");
+    //   const formData = new FormData();
+    //   formData.append("file", file);
+    //   formData.append("upload_preset", "form-submit");
+    //   formData.append("folder", "user");
 
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUD_NAME}/auto/upload`,
-        { method: "POST", body: formData }
-      );
+    //   const response = await fetch(
+    //     `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUD_NAME}/auto/upload`,
+    //     { method: "POST", body: formData }
+    //   );
 
-      const uploadResult = await response.json();
-      setIsUploading(false);
+    //   const uploadResult = await response.json();
+    //   setIsUploading(false);
 
-      if (!uploadResult.secure_url) {
-        alert("Upload failed");
-        return;
-      }
+    //   if (!uploadResult.secure_url) {
+    //     alert("Upload failed");
+    //     return;
+    //   }
 
-      file_url = uploadResult.secure_url;
-      file_id = uploadResult.public_id;
-    }
+    //   file_url = uploadResult.secure_url;
+    //   file_id = uploadResult.public_id;
+    // }
+
+    const isVideoFile = file?.type.startsWith("video/");
 
     const optimisticMessage = {
       _id: Date.now().toString(),
@@ -228,8 +236,9 @@ export default function Chat() {
       senderId: user._id,
       receiverId: chatUser?.userId,
       text: messageText,
-      file_url,
+      file_url: tempFileURL,
       file_id,
+      file_type: isVideoFile ? "video" : "image",
       seen: false,
       createdAt: new Date(),
     };
@@ -619,29 +628,23 @@ export default function Chat() {
                         {!isSender && <img src={chatUser.image} alt="user" className="w-5 h-5 mt-px rounded-full object-center object-cover" />}
                         <div className={`rounded-2xl px-3 py-2 text-sm shadow-sm ${isSender ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-900"}`}>
                           {msg.text && <p className="wrap-break-word max-w-64 sm:max-w-96">{msg.text}</p>}
-                          {msg.file_url && (() => {
-                            const isVideo = /\.(mp4|webm|mov)$/i.test(msg.file_url);
-                            if (isVideo) {
-                              return (
-                                <video
+                          {msg.file_url && (
+                            msg.file_type === "video" ? (
+                              <video
+                                src={msg.file_url}
+                                controls
+                                className="mt-2 w-64 sm:w-96 max-w-xs rounded-lg"
+                              />
+                            ) : (
+                              <a href={msg.file_url} target="_blank">
+                                <img
                                   src={msg.file_url}
-                                  controls
+                                  alt="sent"
                                   className="mt-2 w-64 sm:w-96 max-w-xs rounded-lg"
                                 />
-                              );
-                            } else {
-                              return (
-                                <a href={msg.file_url} target="_blank">
-                                  <img
-                                    src={msg.file_url}
-                                    alt="sent"
-                                    className="mt-2 w-64 sm:w-96 max-w-xs rounded-lg"
-                                  />
-                                </a>
-                              );
-                            }
-                          })()}
-
+                              </a>
+                            )
+                          )}
                           <div className="mt-1 text-[10px] select-none flex justify-between items-center">
                             <span>{moment(msg.createdAt).format("h:mm A")}</span>
                           </div>

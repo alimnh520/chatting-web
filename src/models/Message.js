@@ -7,7 +7,7 @@ const MessageSchema = new mongoose.Schema(
             ref: "Conversation",
             required: true,
         },
-        
+
         messageId: {
             type: String,
             required: true,
@@ -48,6 +48,11 @@ const MessageSchema = new mongoose.Schema(
         },
 
         file_id: {
+            type: String,
+            default: null,
+        },
+
+        file_type: {
             type: String,
             default: null,
         },
