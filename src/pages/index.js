@@ -78,6 +78,27 @@ export default function Chat() {
   }, []);
 
 
+  const requestNotificationPermission = async () => {
+    if (!("Notification" in window)) return;
+
+    let permission = Notification.permission;
+    if (permission === "default") {
+      permission = await Notification.requestPermission();
+    }
+    return permission;
+  };
+
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").then(registration => {
+      console.log("SW registered", registration);
+    });
+  }
+
+
 
   useEffect(() => {
     if (!user?._id) return;
@@ -95,7 +116,24 @@ export default function Chat() {
         return updated;
       });
       updateMessage(msg);
+
+      if (Notification.permission === "granted") {
+        const otherUser =
+          allUser.find(u => u._id === msg.senderId) ||
+          history.find(h => h.userId === msg.senderId);
+
+        const username = otherUser?.username || "Unknown";
+        const image = otherUser?.image || "/avatar.png";
+        const text = msg.text || "📷 Image/Video";
+
+        new Notification(username, {
+          body: text,
+          icon: image,
+          timestamp: new Date(msg.createdAt).getTime(),
+        });
+      }
     });
+
 
     socketRef.current.on("seenMessage", ({ conversationId }) => {
       setMessages(prev =>
@@ -880,12 +918,12 @@ export default function Chat() {
               )}
 
               {deleteMsg && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center text-black bg-opacity-50 top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2">
-                  <div className="bg-gray-600 p-6 rounded-xl shadow-lg w-80 text-center">
+                <div className="absolute w-72 inset-0 z-50 flex items-center justify-center text-white bg-opacity-50 top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2">
+                  <div className="bg-gray-400 sm:bg-gray-600 p-6 rounded-xl shadow-lg w-80 text-center">
                     <h2 className="text-lg font-semibold mb-4">Delete this message?</h2>
                     <div className="flex justify-between gap-4">
                       <button
-                        className="flex-1 py-2 rounded-lg bg-gray-200 hover:bg-gray-300"
+                        className="flex-1 py-2 rounded-lg text-black bg-gray-200 hover:bg-gray-300"
                         onClick={() => setDeleteMsg(false)}
                       >
                         Cancel
