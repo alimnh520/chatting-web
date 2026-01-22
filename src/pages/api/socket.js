@@ -44,6 +44,7 @@ export default function handler(req, res) {
                 await sendPushNotification(message);
             });
 
+
             socket.on("seenMessage", ({ conversationId, senderId }) => {
                 io.to(senderId).emit("seenMessage", { conversationId });
             });

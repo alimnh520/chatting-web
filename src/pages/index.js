@@ -104,6 +104,7 @@ export default function Chat() {
   }, []);
 
 
+
   function urlBase64ToUint8Array(base64String) {
     const padding = "=".repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
@@ -113,6 +114,7 @@ export default function Chat() {
     return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
   }
 
+  
 
   const PUBLIC_VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_KEY;
 
@@ -130,6 +132,7 @@ export default function Chat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(subscription),
       });
+
     }
   }
 
@@ -142,6 +145,7 @@ export default function Chat() {
     };
     init();
   }, []);
+
 
 
 

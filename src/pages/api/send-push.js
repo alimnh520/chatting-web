@@ -1,5 +1,5 @@
-import { subscriptions } from './sharedSubscriptions';
-import webpush from 'web-push';
+import webpush from "web-push";
+import { subscriptions } from "./sharedSubscriptions";
 
 webpush.setVapidDetails(
     "mailto:test@test.com",
@@ -9,13 +9,19 @@ webpush.setVapidDetails(
 
 export async function sendPushNotification(data) {
     const payload = JSON.stringify({
-        title: data.username,
-        text: data.text,
-        icon: data.icon,
-        url: `/`,
+        title: data.username || "New message",
+        text: data.text || "📩 New message",
+        icon: data.icon || "/icon.png",
+        url: "/",
     });
 
+    console.log("Sending push to", subscriptions.length, "subs");
+
     for (const sub of subscriptions) {
-        await webpush.sendNotification(sub, payload).catch(err => console.error(err));
+        try {
+            await webpush.sendNotification(sub, payload);
+        } catch (err) {
+            console.error("Push error:", err);
+        }
     }
 }
