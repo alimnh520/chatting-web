@@ -85,67 +85,18 @@ export default function Chat() {
     if (permission === "default") {
       permission = await Notification.requestPermission();
     }
-
     return permission;
   };
-
 
   useEffect(() => {
     requestNotificationPermission();
   }, []);
 
-  useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js");
-    }
-  }, []);
-
-
-
-  function urlBase64ToUint8Array(base64String) {
-    const padding = "=".repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-      .replace(/\-/g, "+")
-      .replace(/_/g, "/");
-    const rawData = window.atob(base64);
-    return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").then(registration => {
+      console.log("SW registered", registration);
+    });
   }
-
-
-
-  const PUBLIC_VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_KEY;
-
-  async function subscribeUser() {
-    if ("serviceWorker" in navigator) {
-      const registration = await navigator.serviceWorker.ready;
-
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY),
-      });
-
-      await fetch("/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(subscription),
-      });
-
-    }
-  }
-
-  useEffect(() => {
-    const init = async () => {
-      const permission = await Notification.requestPermission();
-      if (permission === "granted") {
-        await subscribeUser();
-      }
-    };
-    init();
-  }, []);
-
-
-
-
 
 
 
@@ -622,6 +573,7 @@ export default function Chat() {
   const filteredUsers = allUser?.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
+  console.log(msgId);
 
 
 

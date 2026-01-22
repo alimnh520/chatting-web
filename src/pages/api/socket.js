@@ -1,7 +1,6 @@
 import { Server } from "socket.io";
 import { ObjectId } from "mongodb";
 import User from "@/models/User";
-import { sendPushNotification } from "./send-push";
 
 export const config = {
     api: {
@@ -39,11 +38,9 @@ export default function handler(req, res) {
             });
 
 
-            socket.on("sendMessage", async ({ message }) => {
+            socket.on("sendMessage", ({ message }) => {
                 io.to(message.receiverId).emit("receiveMessage", message);
-                await sendPushNotification(message);
             });
-
 
             socket.on("seenMessage", ({ conversationId, senderId }) => {
                 io.to(senderId).emit("seenMessage", { conversationId });
