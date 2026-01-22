@@ -282,6 +282,12 @@ export default function Chat() {
   // }, [chatUser?._id, socketRef.current]);
 
 
+  useEffect(() => {
+    if (loadMessages) {
+      setMessages([])
+    }
+  }, [loadMessages])
+
 
   useEffect(() => {
     if (!chatUser?._id) return;
