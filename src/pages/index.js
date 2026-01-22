@@ -258,28 +258,28 @@ export default function Chat() {
   };
 
 
-  // useEffect(() => {
-  //   if (!chatUser?._id) return;
-  //   if (!socketRef.current) return;
+  useEffect(() => {
+    if (!chatUser?._id) return;
+    if (!socketRef.current) return;
 
-  //   socketRef.current.emit('seenMessage', {
-  //     conversationId: chatUser._id,
-  //     senderId: chatUser.userId
-  //   });
+    socketRef.current.emit('seenMessage', {
+      conversationId: chatUser._id,
+      senderId: chatUser.userId
+    });
 
-  //   const handleSeenMessages = async () => {
-  //     await fetch('/api/message/seen', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({
-  //         conversationId: chatUser._id,
-  //         userId: user._id
-  //       })
-  //     });
-  //   };
+    const handleSeenMessages = async () => {
+      await fetch('/api/message/seen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId: chatUser._id,
+          userId: user._id
+        })
+      });
+    };
 
-  //   handleSeenMessages();
-  // }, [chatUser?._id, socketRef.current]);
+    handleSeenMessages();
+  }, [chatUser?._id]);
 
 
   useEffect(() => {
@@ -316,7 +316,6 @@ export default function Chat() {
 
     fetchMessage();
   }, [chatUser?._id]);
-
 
 
 
@@ -360,36 +359,45 @@ export default function Chat() {
 
   const lastActive = (lastActiveAt) => {
     if (!lastActiveAt) return "Offline";
+
     const now = moment();
     const last = moment(lastActiveAt);
+
     const diffSec = now.diff(last, "seconds");
-    const diffMinutes = now.diff(last, "minutes");
-    const diffHours = now.diff(last, "hours");
-    const diffDays = now.diff(last, "days");
+    const diffMin = now.diff(last, "minutes");
+    const diffHour = now.diff(last, "hours");
+    const diffDay = now.diff(last, "days");
 
-    if (diffMinutes < 1) return `Active ${diffSec} sec ago`;
-    if (diffMinutes < 60) return `Active ${diffMinutes} min ago`;
-    if (diffHours < 24) return `Active ${diffHours} hr ago`;
-    if (diffDays < 1) return `Last seen ${last.format("h:mm A")}`;
-
-    return "Offline";
-  };
-
-  const historyActive = (lastActiveAt) => {
-    if (!lastActiveAt) return "";
-    const now = moment();
-    const last = moment(lastActiveAt);
-    const diffSec = now.diff(last, "seconds");
-    const diffMinutes = now.diff(last, "minutes");
-    const diffHours = now.diff(last, "hours");
-    const diffDays = now.diff(last, "days");
-
-    if (diffMinutes < 1) return `${diffSec}s`;
-    if (diffMinutes < 60) return `${diffMinutes}m`;
-    if (diffHours < 24) return `${diffHours}h`;
+    if (diffSec < 30) return "Active now";
+    if (diffMin < 1) return `Active ${diffSec}s ago`;
+    if (diffMin < 60) return `Active ${diffMin}m ago`;
+    if (diffHour < 24) return `Active ${diffHour}h ago`;
+    if (diffDay === 1) return `Yesterday ${last.format("h:mm A")}`;
+    if (diffDay < 7) return `${diffDay} days ago`;
 
     return "";
   };
+
+
+  const historyActive = (lastActiveAt) => {
+    if (!lastActiveAt) return "";
+
+    const now = moment();
+    const last = moment(lastActiveAt);
+
+    const diffSec = now.diff(last, "seconds");
+    const diffMin = now.diff(last, "minutes");
+    const diffHour = now.diff(last, "hours");
+    const diffDay = now.diff(last, "days");
+
+    if (diffSec < 60) return `${diffSec}s`;
+    if (diffMin < 60) return `${diffMin}m`;
+    if (diffHour < 24) return `${diffHour}h`;
+    if (diffDay < 7) return `${diffDay}d`;
+
+    return "";
+  };
+
 
   const scrollRef = useRef(null);
 
