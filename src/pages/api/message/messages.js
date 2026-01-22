@@ -5,9 +5,6 @@ export default async function handler(req, res) {
         try {
             const { conversationId } = req.body;
 
-            console.log('conversation id is : ', conversationId);
-            
-
             if (!conversationId) {
                 return res.status(400).json({ success: false, message: "conversationId is required" });
             }

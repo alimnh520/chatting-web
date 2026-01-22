@@ -19,6 +19,7 @@ export default function Chat() {
   const [history, setHistory] = useState([]);
   const [chatUser, setChatUser] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [loadMessages, setLoadMessages] = useState(false);
 
   const [searchInput, setSearchInput] = useState("");
   const [isSearch, setIsSearch] = useState(false);
@@ -82,9 +83,16 @@ export default function Chat() {
     socketRef.current.emit("join", { userId: user._id });
 
     socketRef.current.on("receiveMessage", (msg) => {
-      setMessages(prev => [...prev, msg]);
+      setMessages(prev => {
+        const updated = [...prev, msg];
+        if (chatUser?.conversationId === msg.conversationId) {
+          messagesCache.current[msg.conversationId] = updated;
+        }
+        return updated;
+      });
       updateMessage(msg);
     });
+
 
     socketRef.current.on("online-users", (users) => {
       setOnlineUsers(users);
@@ -275,24 +283,42 @@ export default function Chat() {
 
 
 
-
   useEffect(() => {
     if (!chatUser?._id) return;
-    const fetchMessage = async () => {
-      const res = await fetch('/api/message/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId: chatUser.conversationId })
-      });
+    setLoadMessages(true);
 
-      const data = await res.json();
-      if (data.success) {
-        setMessages(data.messages);
+    const convId = chatUser.conversationId;
+
+    if (messagesCache.current[convId]) {
+      setLoadMessages(false);
+      setMessages(messagesCache.current[convId]);
+      return;
+    }
+
+    const fetchMessage = async () => {
+      try {
+        const res = await fetch('/api/message/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversationId: convId })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          messagesCache.current[convId] = data.messages; // cache-এ রাখলাম
+          setMessages(data.messages);
+        }
+      } catch (err) {
+        console.error("Error fetching messages:", err);
+      } finally {
+        setLoadMessages(false);
       }
     };
 
     fetchMessage();
   }, [chatUser?._id]);
+
+
 
 
   useEffect(() => {
@@ -375,6 +401,7 @@ export default function Chat() {
   const filteredUsers = allUser?.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
+
 
   return (
     <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
@@ -557,7 +584,7 @@ export default function Chat() {
         </aside>
 
         {
-          chatUser && (<main className={`flex-1 mb-0 flex flex-col ${mobileView && isMobile ? 'hidden' : 'flex'} overflow-hidden transition-all duration-300`}>
+          chatUser && (<main className={`flex-1 mb-0 flex flex-col ${mobileView && isMobile ? 'hidden' : 'flex'} overflow-hidden transition-all duration-300 relative`}>
 
             <div className="sticky sm:top-0 top-0 bg-white z-10 flex items-center gap-3 border-b border-gray-200 px-5 py-3 backdrop-blur">
               <IoIosArrowBack className={`text-2xl ${fullView ? 'rotate-0' : 'rotate-0 sm:rotate-180'} transition-all duration-300 cursor-pointer`} onClick={() => {
@@ -668,6 +695,11 @@ export default function Chat() {
                   </div>
                 );
               })}
+              {loadMessages && (
+                <div className="absolute inset-0 flex items-center justify-center z-10 ">
+                  <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
               {isTyping && (
                 <div className="flex items-center gap-2 text-sm text-gray-500 ml-8 mt-1 animate-pulse">
                   <span className="flex gap-1">
