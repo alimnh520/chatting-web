@@ -1022,18 +1022,19 @@ export default function Chat() {
                   {input || file ? (
                     <button
                       className={`inline-flex h-9 items-center justify-center rounded-xl px-4 text-sm font-semibold text-white
-        ${isUploading ? 'pointer-events-none' : 'pointer-events-auto'}
-        bg-indigo-700`}
+  ${isUploading ? 'pointer-events-none' : 'pointer-events-auto'}
+  bg-indigo-700`}
                       onClick={() => {
-                        if (!isUploading) inputRef.current?.focus({ preventScroll: true });
+                        if (!file) {
+                          inputRef.current?.focus({ preventScroll: true });
+                        }
                         handleSendMessage();
                       }}
                       disabled={isUploading}
                     >
-                      {isUploading
-                        ? "Uploading..."
-                        : "Send"}
+                      {isUploading ? "Uploading..." : "Send"}
                     </button>
+
                   ) : (
                     <button
                       className="text-red-600 inline-flex h-9 text-2xl ml-2 cursor-pointer items-center justify-center"
