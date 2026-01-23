@@ -42,6 +42,7 @@ export default function Chat() {
   const socketRef = useRef(null);
 
   const messagesCache = useRef({});
+  const longPressTimer = useRef(null);
 
 
   useEffect(() => {
@@ -161,8 +162,6 @@ export default function Chat() {
         setIsTyping(false);
       }
     });
-
-
 
 
     socketRef.current.on("online-users", (users) => {
@@ -363,6 +362,23 @@ export default function Chat() {
       console.error(err);
     }
   };
+
+
+  const handlePressStart = (msg) => {
+    longPressTimer.current = setTimeout(() => {
+      setMsgId(msg);
+      if (navigator.vibrate) navigator.vibrate(50);
+      setDeleteBtn(true);
+    }, 600);
+  };
+
+  const handlePressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
 
 
 
@@ -848,10 +864,16 @@ export default function Chat() {
                       <div className="flex items-start justify-start gap-1">
                         {isSender && deleteBtn && (msgId.messageId === msg.messageId) && <button className="self-center mr-2 text-xl text-white w-8 h-8 flex items-center justify-center bg-red-600 rounded-full" onClick={() => setDeleteMsg(true)}><MdDeleteForever /></button>}
                         {!isSender && <img src={chatUser.image} alt="user" className="w-5 h-5 mt-px rounded-full object-center object-cover" />}
-                        <div className={`rounded-2xl px-3 py-2 text-sm shadow-sm ${isSender ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-900"}`} onClick={() => {
-                          setMsgId(msg);
-                          setDeleteBtn(true);
-                        }}>
+                        <div
+                          className={`rounded-2xl px-3 py-2 text-sm shadow-sm ${isSender ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-900"}`}
+
+                          onMouseDown={() => handlePressStart(msg)}
+                          onMouseUp={handlePressEnd}
+                          onMouseLeave={handlePressEnd}
+
+                          onTouchStart={() => handlePressStart(msg)}
+                          onTouchEnd={handlePressEnd}
+                        >
 
                           {msg.text && <p className="wrap-break-word max-w-64 sm:max-w-96">{msg.text}</p>}
                           {msg.file_url && (() => {
