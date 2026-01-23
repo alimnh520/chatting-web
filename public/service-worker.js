@@ -5,7 +5,7 @@ self.addEventListener('push', event => {
         body: data.body,
         icon: data.icon || '/icon-512.png',
         data: data,
-        timestamp: data.timestamp
+        timestamp: data.timestamp,
     };
 
     event.waitUntil(
@@ -15,7 +15,5 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
     event.notification.close();
-    event.waitUntil(
-        clients.openWindow('/')
-    );
+    event.waitUntil(clients.openWindow('/'));
 });

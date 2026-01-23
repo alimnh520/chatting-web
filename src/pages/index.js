@@ -13,6 +13,7 @@ import { MdDeleteForever } from "react-icons/md";
 import { FaCopy } from "react-icons/fa";
 import { io } from "socket.io-client";
 import { UserContext } from "./Provider";
+import subscribeUser from "@/lib/subscribe";
 
 export default function Chat() {
   const { user } = useContext(UserContext);
@@ -82,6 +83,17 @@ export default function Chat() {
 
 
   useEffect(() => {
+    if (Notification.permission !== 'granted') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') subscribeUser();
+      });
+    } else {
+      subscribeUser();
+    }
+  }, []);
+
+
+  useEffect(() => {
     if (!user?._id) return;
 
     socketRef.current = io({ path: "/api/socket" });
@@ -133,7 +145,7 @@ export default function Chat() {
 
     socketRef.current.on("user-typing", ({ from }) => {
       if (chatUser && from === chatUser.userId) {
-        setIsTyping(true); // শুধু অন্য ইউজারের জন্য
+        setIsTyping(true);
       }
     });
 
@@ -579,8 +591,29 @@ export default function Chat() {
     if (!scrollRef.current) return false;
 
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    return scrollHeight - scrollTop - clientHeight < 150; // 150px threshold
+    return scrollHeight - scrollTop - clientHeight < 150;
   };
+
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  };
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+  useEffect(() => {
+    if (chatUser) {
+      setTimeout(() => scrollToBottom(), 100);
+    }
+  }, [chatUser]);
+
+  useEffect(() => {
+    scrollRef.current.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: 'smooth',
+    });
+  }, [])
 
 
   useEffect(() => {
@@ -595,13 +628,12 @@ export default function Chat() {
   const filteredUsers = allUser?.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
-  console.log(msgId);
 
 
 
   return (
     <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
-      <div div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-white sm:bg-gray-400" >
+      <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-white sm:bg-gray-400" >
         <aside className={` fixed sm:static top-0 left-0 z-20 h-full transform transition-all duration-300 ease-in-out ${mobileView ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0 w-full backdrop-blur ${fullView ? 'sm:w-80' : 'sm:w-0'} ${mobileView ? 'w-full' : 'w-0'} overflow-hidden border-r border-gray-200`}>
           <div className="p-4 pb-2">
             <div className="flex items-center justify-between">

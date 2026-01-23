@@ -1,4 +1,3 @@
-// pages/api/subscribe.js
 import webpush from 'web-push';
 
 webpush.setVapidDetails(
@@ -7,7 +6,8 @@ webpush.setVapidDetails(
     process.env.VAPID_PRIVATE_KEY
 );
 
-let subscriptions = []; // মেমরিতে রাখছি, ডাটাবেস লাগবে না
+// মেমরিতে subscriptions রাখছি
+export let subscriptions = [];
 
 export default async function handler(req, res) {
     if (req.method === 'POST') {

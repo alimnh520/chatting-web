@@ -1,4 +1,3 @@
-// pages/api/notify.js
 import webpush from 'web-push';
 import { subscriptions } from './subscribe';
 

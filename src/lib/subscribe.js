@@ -1,5 +1,4 @@
-// utils/subscribe.js
-export async function subscribeUser() {
+export default async function subscribeUser() {
     if ('serviceWorker' in navigator) {
         const sw = await navigator.serviceWorker.register('/service-worker.js');
 
@@ -10,6 +9,7 @@ export async function subscribeUser() {
             ),
         });
 
+        // API কে POST করা subscription
         await fetch('/api/subscribe', {
             method: 'POST',
             body: JSON.stringify({ subscription }),
@@ -20,7 +20,7 @@ export async function subscribeUser() {
     }
 }
 
-// helper function
+// Helper function
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
