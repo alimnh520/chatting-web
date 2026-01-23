@@ -107,6 +107,20 @@ export default function Chat() {
             : msg
         )
       );
+
+      setHistory(prev =>
+        prev.map(conv =>
+          conv.conversationId === conversationId
+            ? {
+              ...conv,
+              unreadCount: {
+                ...conv.unreadCount,
+                [user._id]: 0
+              }
+            }
+            : conv
+        )
+      );
     });
 
     socketRef.current.on("messageDeleted", ({ messageId }) => {
@@ -358,7 +372,6 @@ export default function Chat() {
   };
 
 
-
   // typing indicator
 
   const typingTimeoutRef = useRef(null);
@@ -398,6 +411,7 @@ export default function Chat() {
       })
     });
   };
+
 
   useEffect(() => {
     if (!chatUser?.conversationId) return;
