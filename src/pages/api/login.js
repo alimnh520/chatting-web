@@ -31,7 +31,7 @@ export default async function handler(req, res) {
         const isProduction = process.env.NODE_ENV === "production";
 
         const cookie = [
-            `mychattingweb=${token}`,
+            `nahidhasanalimchattingweb=${token}`,
             "Path=/",
             "HttpOnly",
             `Max-Age=86400`,

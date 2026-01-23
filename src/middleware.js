@@ -3,7 +3,7 @@ import { jwtVerify } from "jose";
 
 export async function middleware(request) {
   const pathname = request.nextUrl.pathname;
-  const token = request.cookies.get("mychattingweb")?.value;
+  const token = request.cookies.get("nahidhasanalimchattingweb")?.value;
 
   if (pathname.startsWith("/") || pathname.startsWith("/components/profile")) {
     if (!token) {
