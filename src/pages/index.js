@@ -81,28 +81,6 @@ export default function Chat() {
   }, []);
 
 
-  const requestNotificationPermission = async () => {
-    if (!("Notification" in window)) return;
-
-    let permission = Notification.permission;
-    if (permission === "default") {
-      permission = await Notification.requestPermission();
-    }
-    return permission;
-  };
-
-  useEffect(() => {
-    requestNotificationPermission();
-  }, []);
-
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js").then(registration => {
-      console.log("SW registered", registration);
-    });
-  }
-
-
-
   useEffect(() => {
     if (!user?._id) return;
 
@@ -321,6 +299,20 @@ export default function Chat() {
     setMessages(prev => [...prev, optimisticMessage]);
     updateMessage(optimisticMessage);
     socketRef.current.emit("sendMessage", { message: optimisticMessage });
+
+    try {
+      await fetch('/api/notify', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: user.username, // যিনি পাঠাচ্ছে
+          body: messageText || (file ? "📷 Image/Video" : ""),
+          icon: user.image,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (err) {
+      console.error("Notification failed:", err);
+    }
 
     try {
       const res = await fetch("/api/message/send", {
@@ -583,9 +575,22 @@ export default function Chat() {
 
   const scrollRef = useRef(null);
 
+  const isNearBottom = () => {
+    if (!scrollRef.current) return false;
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    return scrollHeight - scrollTop - clientHeight < 150; // 150px threshold
+  };
+
+
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (!scrollRef.current) return;
+
+    if (isNearBottom()) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
   }, [messages]);
+
 
   const filteredUsers = allUser?.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
@@ -865,7 +870,7 @@ export default function Chat() {
                       <div className="flex items-start justify-start gap-1 relative">
 
                         {isSender && deleteBtn && (msgId.messageId === msg.messageId) && (
-                          <div className="absolute z-10 -left-16 self-center rounded-md sm:bg-white bg-gray-400 text-xl text-white flex flex-col gap-y-2 p-2">
+                          <div className="absolute z-10 -left-14 self-center rounded-md sm:bg-white bg-gray-400 text-xl text-white flex flex-col gap-y-2 p-2">
                             <button className="w-8 h-8 flex items-center justify-center bg-red-600 rounded-full" onClick={(e) => {
                               e.stopPropagation();
                               setDeleteMsg(true);
@@ -876,6 +881,7 @@ export default function Chat() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 navigator.clipboard.writeText(msg.text);
+                                setDeleteBtn(false);
                               }}
                             >
                               <FaCopy />
@@ -916,7 +922,7 @@ export default function Chat() {
                                 <video
                                   src={msg.file_url}
                                   controls
-                                  className="mt-2 w-64 sm:w-96 max-w-xs rounded-lg"
+                                  className="mt-2 w-60 sm:w-96 max-w-xs rounded-lg"
                                 />
                               );
                             } else {
@@ -925,7 +931,7 @@ export default function Chat() {
                                   <img
                                     src={msg.file_url}
                                     alt="sent"
-                                    className="mt-2 w-64 sm:w-96 max-w-xs rounded-lg"
+                                    className="mt-2 w-60 sm:w-96 max-w-xs rounded-lg"
                                   />
                                 </a>
                               );
