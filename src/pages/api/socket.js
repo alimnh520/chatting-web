@@ -22,12 +22,15 @@ export default function handler(req, res) {
             },
         });
 
+        const onlineSockets = {};
+
         io.on("connection", (socket) => {
 
             socket.on("join", async ({ userId }) => {
                 socket.userId = userId;
                 socket.join(userId);
                 onlineUsers.set(userId, socket.id);
+                onlineSockets[userId] = socket;
 
                 await User.updateOne(
                     { _id: new ObjectId(userId) },
@@ -54,6 +57,12 @@ export default function handler(req, res) {
                 });
             });
 
+            socket.on("sendNotification", ({ to, title, body, icon, conversationId }) => {
+                const targetSocket = onlineSockets[to];
+                if (targetSocket) {
+                    targetSocket.emit("notify", { title, body, icon, conversationId });
+                }
+            });
 
             socket.on("typing", ({ from, to }) => {
                 io.to(to).emit("user-typing", { from });
@@ -88,25 +97,18 @@ export default function handler(req, res) {
             });
 
             socket.on("disconnect", async () => {
-                const entry = [...onlineUsers.entries()]
-                    .find(([_, socketId]) => socketId === socket.id);
-
+                const entry = [...onlineUsers.entries()].find(([_, socketId]) => socketId === socket.id);
                 if (entry) {
                     const [userId] = entry;
                     onlineUsers.delete(userId);
+                    delete onlineSockets[userId];
 
                     await User.updateOne(
                         { _id: new ObjectId(userId) },
-                        {
-                            $set: {
-                                online: false,
-                                lastActiveAt: new Date()
-                            }
-                        }
+                        { $set: { online: false, lastActiveAt: new Date() } }
                     );
 
                     io.emit("online-users", Array.from(onlineUsers.keys()));
-
                     io.emit("user-stop-typing", { from: userId });
                 }
             });

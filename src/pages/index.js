@@ -81,6 +81,28 @@ export default function Chat() {
 
 
   useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js")
+        .then(reg => console.log("SW registered", reg))
+        .catch(err => console.error("SW registration failed", err));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (Notification.permission === "granted") {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: "BOY2eRdRBCGq2NIlP5GrydB_TSDmKi8UMlRm2QhFA54quX9884IL0P8GYaKkBZrVu87QwsX-HtIyNMlmicXlfac"
+        });
+      });
+    } else {
+      Notification.requestPermission();
+    }
+  }, []);
+
+
+  useEffect(() => {
     if (!user?._id) return;
 
     socketRef.current = io({ path: "/api/socket" });
@@ -139,6 +161,34 @@ export default function Chat() {
     };
 
   }, [user?._id, chatUser?.conversationId]);
+
+  useEffect(() => {
+    if (!socketRef.current) return;
+
+    socketRef.current.on("notify", ({ title, body, icon, conversationId }) => {
+      if (Notification.permission !== "granted") {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            showNotification(title, body, icon, conversationId);
+          }
+        });
+      } else {
+        showNotification(title, body, icon, conversationId);
+      }
+
+      function showNotification(title, body, icon, conversationId) {
+        if (Notification.permission === "granted") {
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+          const notification = new Notification(title, { body, icon, data: { conversationId } });
+          notification.onclick = () => {
+            window.focus();
+            const conv = history.find(h => h.conversationId === conversationId);
+            if (conv) setChatUser(conv);
+          };
+        }
+      }
+    });
+  }, [history]);
 
 
   const updateMessage = (msg) => {
@@ -290,6 +340,13 @@ export default function Chat() {
     updateMessage(optimisticMessage);
 
     socketRef.current.emit("sendMessage", { message: optimisticMessage });
+    socketRef.current.emit("sendNotification", {
+      to: chatUser.userId,
+      title: user.username,
+      body: messageText,
+      icon: user.image,
+      conversationId: chatUser.conversationId,
+    });
 
     try {
       const res = await fetch("/api/message/send", {
