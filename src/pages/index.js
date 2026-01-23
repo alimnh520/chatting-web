@@ -13,7 +13,6 @@ import { MdDeleteForever } from "react-icons/md";
 import { FaCopy } from "react-icons/fa";
 import { io } from "socket.io-client";
 import { UserContext } from "./Provider";
-import subscribeUser from "@/lib/subscribe";
 
 export default function Chat() {
   const { user } = useContext(UserContext);
@@ -55,7 +54,6 @@ export default function Chat() {
       const handlePopState = (e) => {
         e.preventDefault();
         setMobileView(true);
-        setChatUser(null);
       };
 
       window.addEventListener("popstate", handlePopState);
@@ -81,14 +79,6 @@ export default function Chat() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  useEffect(() => {
-    if (user?.id) {
-      subscribeUser(user.id);
-    }
-  }, [user?.id]);
-
-
-
 
   useEffect(() => {
     if (!user?._id) return;
@@ -106,22 +96,6 @@ export default function Chat() {
         return updated;
       });
       updateMessage(msg);
-
-      if (Notification.permission === "granted") {
-        const otherUser =
-          allUser.find(u => u._id === msg.senderId) ||
-          history.find(h => h.userId === msg.senderId);
-
-        const username = otherUser?.username || "Unknown";
-        const image = otherUser?.image || "/avatar.png";
-        const text = msg.text || "📷 Image/Video";
-
-        new Notification(username, {
-          body: text,
-          icon: image,
-          timestamp: new Date(msg.createdAt).getTime(),
-        });
-      }
     });
 
 
@@ -152,7 +126,6 @@ export default function Chat() {
       }
     });
 
-
     socketRef.current.on("online-users", (users) => {
       setOnlineUsers(users);
     });
@@ -166,7 +139,6 @@ export default function Chat() {
     };
 
   }, [user?._id, chatUser?.conversationId]);
-
 
 
   const updateMessage = (msg) => {
@@ -305,24 +277,19 @@ export default function Chat() {
 
     setInput("");
     setFile(null);
-    setMessages(prev => [...prev, optimisticMessage]);
-    updateMessage(optimisticMessage);
-    socketRef.current.emit("sendMessage", { message: optimisticMessage });
 
-    try {
-      await fetch("/api/notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          toUserId: chatUser?.userId || '',
-          title: user.username,
-          body: messageText,
-          icon: user.image,
-        }),
-      });
-    } catch (err) {
-      console.error("Notification failed:", err);
+    setMessages(prev => [...prev, optimisticMessage]);
+
+    const convId = chatUser.conversationId;
+    const existingCache = messagesCache.current[convId] || [];
+    const isDuplicate = existingCache.some(m => m.messageId === optimisticMessage.messageId);
+    if (!isDuplicate) {
+      messagesCache.current[convId] = [...existingCache, optimisticMessage];
     }
+
+    updateMessage(optimisticMessage);
+
+    socketRef.current.emit("sendMessage", { message: optimisticMessage });
 
     try {
       const res = await fetch("/api/message/send", {
@@ -344,7 +311,12 @@ export default function Chat() {
 
     setMessages(prev => prev.filter(m => m.messageId !== msgId.messageId));
 
-    updateMessage({ ...messages.find(m => m.messageId === msgId.messageId), text: "Message deleted" });
+    const lastMessage = messages[messages.length - 1];
+
+    if (lastMessage?.messageId === msgId.messageId) {
+      updateMessage({ ...lastMessage, text: "Message deleted" });
+    }
+
 
     socketRef.current.emit("deleteMessage", {
       messageId: msgId.messageId,
@@ -366,7 +338,6 @@ export default function Chat() {
       console.error(err);
     }
   };
-
 
 
   const handlePressEnd = () => {
@@ -516,10 +487,7 @@ export default function Chat() {
       const history = data?.history || [];
 
       setHistory(history);
-
-      if (!chatUser && history.length > 0 && !isMobile) {
-        setChatUser(history[0]);
-      }
+      setChatUser(history[0]);
     };
 
     fetchHistory();
@@ -552,7 +520,7 @@ export default function Chat() {
     const diffHour = now.diff(last, "hours");
     const diffDay = now.diff(last, "days");
 
-    if (diffSec < 30) return "Active now";
+    if (diffSec < 30) return "exit now";
     if (diffMin < 60) return `Active ${diffMin}m ago`;
     if (diffHour < 24) return `Active ${diffHour}h ago`;
     if (diffDay === 1) return `Yesterday ${last.format("h:mm A")}`;
@@ -568,7 +536,6 @@ export default function Chat() {
     const now = moment();
     const last = moment(lastActiveAt);
 
-    const diffSec = now.diff(last, "seconds");
     const diffMin = now.diff(last, "minutes");
     const diffHour = now.diff(last, "hours");
     const diffDay = now.diff(last, "days");
@@ -603,10 +570,9 @@ export default function Chat() {
   );
 
 
-
   return (
     <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
-      <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-white sm:bg-gray-400" >
+      <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-gray-100 sm:bg-gray-400" >
         <aside className={` fixed sm:static top-0 left-0 z-20 h-full transform transition-all duration-300 ease-in-out ${mobileView ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0 w-full backdrop-blur ${fullView ? 'sm:w-80' : 'sm:w-0'} ${mobileView ? 'w-full' : 'w-0'} overflow-hidden border-r border-gray-200`}>
           <div className="p-4 pb-2">
             <div className="flex items-center justify-between">
@@ -808,7 +774,6 @@ export default function Chat() {
               <IoIosArrowBack className={`text-2xl ${fullView ? 'rotate-0' : 'rotate-0 sm:rotate-180'} transition-all duration-300 cursor-pointer`} onClick={() => {
                 setFullView(!fullView);
                 if (window.innerWidth < 660) {
-                  setChatUser(null);
                   setMobileView(true);
                 }
               }} />
