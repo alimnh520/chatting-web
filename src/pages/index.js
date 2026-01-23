@@ -82,8 +82,11 @@ export default function Chat() {
   }, []);
 
   useEffect(() => {
-    subscribeUser();
-  }, []);
+    if (user?.id) {
+      subscribeUser(user.id);
+    }
+  }, [user?.id]);
+
 
 
 
@@ -307,14 +310,15 @@ export default function Chat() {
     socketRef.current.emit("sendMessage", { message: optimisticMessage });
 
     try {
-      await fetch('/api/notify', {
-        method: 'POST',
+      await fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: user.username, // যিনি পাঠাচ্ছে
-          body: messageText || (file ? "📷 Image/Video" : ""),
+          toUserId: chatUser?.userId || '',
+          title: user.username,
+          body: messageText,
           icon: user.image,
         }),
-        headers: { 'Content-Type': 'application/json' },
       });
     } catch (err) {
       console.error("Notification failed:", err);
@@ -549,7 +553,6 @@ export default function Chat() {
     const diffDay = now.diff(last, "days");
 
     if (diffSec < 30) return "Active now";
-    if (diffMin < 1) return `Active ${diffSec}s ago`;
     if (diffMin < 60) return `Active ${diffMin}m ago`;
     if (diffHour < 24) return `Active ${diffHour}h ago`;
     if (diffDay === 1) return `Yesterday ${last.format("h:mm A")}`;
@@ -570,7 +573,6 @@ export default function Chat() {
     const diffHour = now.diff(last, "hours");
     const diffDay = now.diff(last, "days");
 
-    if (diffSec < 60) return `${diffSec}s`;
     if (diffMin < 60) return `${diffMin}m`;
     if (diffHour < 24) return `${diffHour}h`;
     if (diffDay < 7) return `${diffDay}d`;
@@ -731,7 +733,7 @@ export default function Chat() {
                     />
                     <div className="absolute -bottom-1 -right-1">
                       {onlineUsers.includes(conv.userId) ? (
-                        <span className="inline-block w-2 h-2 bg-green-600 rounded-full"></span>
+                        <span className="inline-block w-3 h-3 bg-green-600 rounded-full"></span>
                       ) : (
                         <span
                           className={`bg-green-600 text-[10px] rounded-full text-white inline-flex items-center justify-center ${lastActive(conv.lastActiveAt) ? "px-1" : ""

@@ -1,8 +1,8 @@
-export default async function subscribeUser() {
-    if (!("serviceWorker" in navigator)) return;
-    if (!("PushManager" in window)) return;
-
+export default async function subscribeUser(userId) {
     const registration = await navigator.serviceWorker.register("/sw.js");
+
+    const old = await registration.pushManager.getSubscription();
+    if (old) await old.unsubscribe();
 
     const permission = await Notification.requestPermission();
     if (permission !== "granted") return;
@@ -15,6 +15,9 @@ export default async function subscribeUser() {
     await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(subscription),
+        body: JSON.stringify({
+            userId,
+            subscription
+        }),
     });
 }

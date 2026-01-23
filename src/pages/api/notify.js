@@ -1,4 +1,6 @@
 import webpush from "web-push";
+import PushSubscription from "@/models/PushSubscription";
+import { connectDB } from "@/lib/connectDb";
 
 webpush.setVapidDetails(
     "mailto:test@test.com",
@@ -9,22 +11,21 @@ webpush.setVapidDetails(
 export default async function handler(req, res) {
     if (req.method !== "POST") return res.status(405).end();
 
-    const data = req.body;
+    const { toUserId, title, body, icon } = req.body;
+
+    await connectDB();
+
+    const sub = await PushSubscription.findOne({ userId: toUserId });
+    if (!sub) return res.json({ success: false, message: "User not subscribed" });
 
     const payload = JSON.stringify({
-        title: data.title,
-        body: data.body,
-        icon: data.icon,
+        title,
+        body,
+        icon,
         url: "/"
     });
 
-    const subs = global.subscriptions || [];
-
-    await Promise.all(
-        subs.map(sub =>
-            webpush.sendNotification(sub, payload).catch(() => { })
-        )
-    );
+    await webpush.sendNotification(sub.subscription, payload);
 
     res.json({ success: true });
 }
