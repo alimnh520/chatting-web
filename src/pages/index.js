@@ -83,6 +83,14 @@ export default function Chat() {
 
 
   useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(reg => console.log("SW registered", reg))
+        .catch(err => console.error("SW registration failed", err));
+    }
+  }, [])
+
+  useEffect(() => {
     if (Notification.permission !== 'granted') {
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') subscribeUser();
