@@ -57,13 +57,6 @@ export default function handler(req, res) {
                 });
             });
 
-            socket.on("sendNotification", ({ to, title, body, icon, conversationId }) => {
-                const targetSocket = onlineSockets[to];
-                if (targetSocket) {
-                    targetSocket.emit("notify", { title, body, icon, conversationId });
-                }
-            });
-
             socket.on("typing", ({ from, to }) => {
                 io.to(to).emit("user-typing", { from });
             });
