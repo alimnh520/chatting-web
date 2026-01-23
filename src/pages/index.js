@@ -81,24 +81,10 @@ export default function Chat() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(reg => console.log("SW registered", reg))
-        .catch(err => console.error("SW registration failed", err));
-    }
-  }, [])
-
-  useEffect(() => {
-    if (Notification.permission !== 'granted') {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') subscribeUser();
-      });
-    } else {
-      subscribeUser();
-    }
+    subscribeUser();
   }, []);
+
 
 
   useEffect(() => {

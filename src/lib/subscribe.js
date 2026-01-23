@@ -1,29 +1,20 @@
 export default async function subscribeUser() {
-    if ('serviceWorker' in navigator) {
-        const sw = await navigator.serviceWorker.register('/service-worker.js');
+    if (!("serviceWorker" in navigator)) return;
+    if (!("PushManager" in window)) return;
 
-        const subscription = await sw.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(
-                process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-            ),
-        });
+    const registration = await navigator.serviceWorker.register("/sw.js");
 
-        // API কে POST করা subscription
-        await fetch('/api/subscribe', {
-            method: 'POST',
-            body: JSON.stringify({ subscription }),
-            headers: { 'Content-Type': 'application/json' },
-        });
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return;
 
-        console.log('Subscribed for push notifications!');
-    }
-}
+    const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    });
 
-// Helper function
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    return new Uint8Array([...rawData].map(char => char.charCodeAt(0)));
+    await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(subscription),
+    });
 }

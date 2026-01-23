@@ -1,22 +1,15 @@
-import webpush from 'web-push';
+let subscriptions = global.subscriptions || [];
+global.subscriptions = subscriptions;
 
-webpush.setVapidDetails(
-    'mailto:test@example.com',
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-);
+export default function handler(req, res) {
+    if (req.method !== "POST") return res.status(405).end();
 
-// মেমরিতে subscriptions রাখছি
-export let subscriptions = [];
+    const sub = req.body;
 
-export default async function handler(req, res) {
-    if (req.method === 'POST') {
-        const { subscription } = req.body;
-        subscriptions.push(subscription);
-        res.status(201).json({ success: true });
-    } else if (req.method === 'GET') {
-        res.status(200).json({ subscriptions });
-    } else {
-        res.status(405).end();
+    const exists = subscriptions.find(s => JSON.stringify(s) === JSON.stringify(sub));
+    if (!exists) {
+        subscriptions.push(sub);
     }
+
+    res.json({ success: true });
 }

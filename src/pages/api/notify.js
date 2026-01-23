@@ -1,31 +1,30 @@
-import webpush from 'web-push';
-import { subscriptions } from './subscribe';
+import webpush from "web-push";
 
 webpush.setVapidDetails(
-    'mailto:test@example.com',
+    "mailto:test@test.com",
     process.env.VAPID_PUBLIC_KEY,
     process.env.VAPID_PRIVATE_KEY
 );
 
 export default async function handler(req, res) {
-    if (req.method === 'POST') {
-        const { title, body, icon } = req.body;
+    if (req.method !== "POST") return res.status(405).end();
 
-        const payload = JSON.stringify({
-            title,
-            body,
-            icon,
-            timestamp: Date.now(),
-        });
+    const data = req.body;
 
-        const sendNotifications = subscriptions.map(sub =>
-            webpush.sendNotification(sub, payload).catch(err => console.error(err))
-        );
+    const payload = JSON.stringify({
+        title: data.title,
+        body: data.body,
+        icon: data.icon,
+        url: "/"
+    });
 
-        await Promise.all(sendNotifications);
+    const subs = global.subscriptions || [];
 
-        res.status(200).json({ success: true });
-    } else {
-        res.status(405).end();
-    }
+    await Promise.all(
+        subs.map(sub =>
+            webpush.sendNotification(sub, payload).catch(() => { })
+        )
+    );
+
+    res.json({ success: true });
 }
