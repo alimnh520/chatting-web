@@ -846,13 +846,12 @@ export default function Chat() {
               className="flex-1 overflow-y-auto p-4 pl-2 scrollbar"
               ref={scrollRef}
               onClick={() => {
-                if (ignoreNextClick.current) {
+                if (window.innerWidth > 660 && ignoreNextClick.current) {
                   ignoreNextClick.current = false;
                   return;
                 }
                 if (deleteBtn) setDeleteBtn(false);
               }}
-
             >
               {messages?.map((msg, index) => {
                 const isSender = msg.senderId === user._id;
@@ -866,7 +865,7 @@ export default function Chat() {
                       <div className="flex items-start justify-start gap-1 relative">
 
                         {isSender && deleteBtn && (msgId.messageId === msg.messageId) && (
-                          <div className="absolute z-10 -left-16 self-center rounded-md bg-white text-xl text-white flex flex-col gap-y-2 p-2">
+                          <div className="absolute z-10 -left-16 self-center rounded-md sm:bg-white bg-gray-400 text-xl text-white flex flex-col gap-y-2 p-2">
                             <button className="w-8 h-8 flex items-center justify-center bg-red-600 rounded-full" onClick={(e) => {
                               e.stopPropagation();
                               setDeleteMsg(true);
