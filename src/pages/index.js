@@ -572,7 +572,7 @@ export default function Chat() {
 
   return (
     <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
-      <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-gray-100 sm:bg-gray-400" >
+      <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-gray-200 sm:bg-gray-400" >
         <aside className={` fixed sm:static top-0 left-0 z-20 h-full transform transition-all duration-300 ease-in-out ${mobileView ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0 w-full backdrop-blur ${fullView ? 'sm:w-80' : 'sm:w-0'} ${mobileView ? 'w-full' : 'w-0'} overflow-hidden border-r border-gray-200`}>
           <div className="p-4 pb-2">
             <div className="flex items-center justify-between">
@@ -667,7 +667,7 @@ export default function Chat() {
               return (
                 <button
                   key={conv._id}
-                  className={`w-full flex items-center gap-3 border-b border-b-gray-100 px-4 py-3 text-left hover:bg-indigo-50 ${conv.userId === chatUser?.userId ? "bg-indigo-50" : ""}`}
+                  className={`w-full flex items-center gap-3 border-b border-b-gray-100 px-4 py-3 text-left hover:bg-indigo-200 ${conv.userId === chatUser?.userId ? "bg-indigo-200" : ""}`}
                   onClick={() => {
                     const findHistory = history.find(h => h.participants.includes(conv.userId) && h.participants.includes(user._id));
                     if (findHistory) {
@@ -1025,7 +1025,7 @@ export default function Chat() {
         ${isUploading ? 'pointer-events-none' : 'pointer-events-auto'}
         bg-indigo-700`}
                       onClick={() => {
-                        inputRef.current?.focus({ preventScroll: true });
+                        if (!isUploading) inputRef.current?.focus({ preventScroll: true });
                         handleSendMessage();
                       }}
                       disabled={isUploading}
