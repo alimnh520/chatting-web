@@ -587,43 +587,20 @@ export default function Chat() {
 
   const scrollRef = useRef(null);
 
-  const isNearBottom = () => {
-    if (!scrollRef.current) return false;
-
-    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    return scrollHeight - scrollTop - clientHeight < 150;
-  };
-
-  const scrollToBottom = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  };
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-  useEffect(() => {
-    if (chatUser) {
-      setTimeout(() => scrollToBottom(), 100);
-    }
-  }, [chatUser]);
-
-  useEffect(() => {
-    scrollRef.current.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: 'smooth',
-    });
-  }, [])
-
+  const prevMessagesLength = useRef(0);
 
   useEffect(() => {
     if (!scrollRef.current) return;
 
-    if (isNearBottom()) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    const scrollEl = scrollRef.current;
+    const currentMessagesLength = messages.length;
 
+    if (currentMessagesLength > prevMessagesLength.current) {
+      scrollEl.scrollTop = scrollEl.scrollHeight;
+    }
+
+    prevMessagesLength.current = currentMessagesLength;
+  }, [messages]);
 
   const filteredUsers = allUser?.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
