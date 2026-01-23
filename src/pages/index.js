@@ -10,7 +10,7 @@ import { FaHeart } from "react-icons/fa";
 import { IoCall } from "react-icons/io5";
 import { IoVideocam } from "react-icons/io5";
 import { MdDeleteForever } from "react-icons/md";
-
+import { FaCopy } from "react-icons/fa";
 import { io } from "socket.io-client";
 import { UserContext } from "./Provider";
 
@@ -43,6 +43,8 @@ export default function Chat() {
 
   const messagesCache = useRef({});
   const longPressTimer = useRef(null);
+  const ignoreNextClick = useRef(false);
+
 
 
   useEffect(() => {
@@ -364,13 +366,6 @@ export default function Chat() {
   };
 
 
-  const handlePressStart = (msg) => {
-    longPressTimer.current = setTimeout(() => {
-      setMsgId(msg);
-      if (navigator.vibrate) navigator.vibrate(50);
-      setDeleteBtn(true);
-    }, 600);
-  };
 
   const handlePressEnd = () => {
     if (longPressTimer.current) {
@@ -379,6 +374,15 @@ export default function Chat() {
     }
   };
 
+  const handlePressStart = (msg) => {
+    longPressTimer.current = setTimeout(() => {
+      setMsgId(msg);
+      if (navigator.vibrate) navigator.vibrate(30);
+      setDeleteBtn(true);
+
+      ignoreNextClick.current = true;
+    }, 600);
+  };
 
 
 
@@ -825,11 +829,6 @@ export default function Chat() {
 
                 <button
                   className="cursor-pointer size-9 bg-red-600 flex items-center justify-center rounded-full text-white"
-                  onClick={() => {
-                    setCallType("audio");
-                    setIsCalling(true);
-                    setIsAudio(true);
-                  }}
                 >
                   <IoCall className="text-2xl" />
                 </button>
@@ -843,7 +842,18 @@ export default function Chat() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 pl-2 scrollbar" ref={scrollRef}>
+            <div
+              className="flex-1 overflow-y-auto p-4 pl-2 scrollbar"
+              ref={scrollRef}
+              onClick={() => {
+                if (ignoreNextClick.current) {
+                  ignoreNextClick.current = false;
+                  return;
+                }
+                if (deleteBtn) setDeleteBtn(false);
+              }}
+
+            >
               {messages?.map((msg, index) => {
                 const isSender = msg.senderId === user._id;
                 const showAvatar =
@@ -851,28 +861,52 @@ export default function Chat() {
                   msg.seen &&
                   index === messages.length - 1;
                 return (
-                  <div key={msg._id} className={`mb-2 relative flex ${isSender ? "justify-end" : "justify-start"}`} onClick={() => {
-                    if (deleteBtn) {
-                      setDeleteBtn(false);
-                    }
-                  }}>
-                    <div className="flex flex-col items-end" onClick={() => {
-                      if (deleteBtn) {
-                        setDeleteBtn(false);
-                      }
-                    }}>
-                      <div className="flex items-start justify-start gap-1">
-                        {isSender && deleteBtn && (msgId.messageId === msg.messageId) && <button className="self-center mr-2 text-xl text-white w-8 h-8 flex items-center justify-center bg-red-600 rounded-full" onClick={() => setDeleteMsg(true)}><MdDeleteForever /></button>}
+                  <div key={msg._id} className={`mb-2 relative flex ${isSender ? "justify-end" : "justify-start"}`}>
+                    <div className="flex flex-col items-end">
+                      <div className="flex items-start justify-start gap-1 relative">
+
+                        {isSender && deleteBtn && (msgId.messageId === msg.messageId) && (
+                          <div className="absolute z-10 -left-16 self-center rounded-md bg-white text-xl text-white flex flex-col gap-y-2 p-2">
+                            <button className="w-8 h-8 flex items-center justify-center bg-red-600 rounded-full" onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteMsg(true);
+                            }}><MdDeleteForever /></button>
+
+                            <button
+                              className="w-8 h-8 flex items-center justify-center bg-blue-600 rounded-full"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(msg.text);
+                              }}
+                            >
+                              <FaCopy />
+                            </button>
+
+                          </div>
+                        )}
+
                         {!isSender && <img src={chatUser.image} alt="user" className="w-5 h-5 mt-px rounded-full object-center object-cover" />}
+
                         <div
                           className={`rounded-2xl px-3 py-2 text-sm shadow-sm ${isSender ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-900"}`}
-
-                          onMouseDown={() => handlePressStart(msg)}
-                          onMouseUp={handlePressEnd}
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            handlePressStart(msg);
+                          }}
+                          onMouseUp={(e) => {
+                            e.stopPropagation();
+                            handlePressEnd();
+                          }}
                           onMouseLeave={handlePressEnd}
 
-                          onTouchStart={() => handlePressStart(msg)}
-                          onTouchEnd={handlePressEnd}
+                          onTouchStart={(e) => {
+                            e.stopPropagation();
+                            handlePressStart(msg);
+                          }}
+                          onTouchEnd={(e) => {
+                            e.stopPropagation();
+                            handlePressEnd();
+                          }}
                         >
 
                           {msg.text && <p className="wrap-break-word max-w-64 sm:max-w-96">{msg.text}</p>}
@@ -915,8 +949,6 @@ export default function Chat() {
                         <span className="text-[10px] font-semibold">Unread</span>
                       )}
                     </div>
-
-
 
                   </div>
                 );
