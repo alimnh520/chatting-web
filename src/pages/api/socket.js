@@ -66,28 +66,33 @@ export default function handler(req, res) {
             });
 
 
-            //  CALL EVENTS
-            socket.on("call-user", ({ from, to, type }) => {
-                io.to(to).emit("incoming-call", { from, type });
+            // Join conversation room
+            socket.on("join-call-room", ({ conversationId, userId }) => {
+                socket.join(conversationId);
+                onlineUsers.set(userId, socket.id);
+                console.log(`User ${userId} joined room ${conversationId}`);
             });
 
-            socket.on("accept-call", ({ from, to }) => {
-                io.to(to).emit("call-accepted", { from });
+            // Call Offer
+            socket.on("call-offer", ({ conversationId, offer, from }) => {
+                socket.to(conversationId).emit("call-offer", { offer, from });
             });
 
-            socket.on("reject-call", ({ from, to }) => {
-                io.to(to).emit("call-rejected", { from });
-            });
-            socket.on("end-call", ({ from, to }) => {
-                io.to(to).emit("call-ended", { from });
-            });
-            socket.on("call-offer", ({ to, offer, from }) => {
-                io.to(to).emit("call-offer", { offer, from });
+            // Call Answer
+            socket.on("call-answer", ({ conversationId, answer, from }) => {
+                socket.to(conversationId).emit("call-answer", { answer, from });
             });
 
-            socket.on("call-answer", ({ to, answer }) => {
-                io.to(to).emit("call-answer", { answer });
+            // ICE Candidate
+            socket.on("ice-candidate", ({ conversationId, candidate, from }) => {
+                socket.to(conversationId).emit("ice-candidate", { candidate, from });
             });
+
+            // End Call
+            socket.on("end-call", ({ conversationId }) => {
+                io.to(conversationId).emit("call-ended");
+            });
+
 
             socket.on("disconnect", async () => {
                 const entry = [...onlineUsers.entries()].find(([_, socketId]) => socketId === socket.id);

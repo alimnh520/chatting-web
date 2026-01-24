@@ -89,15 +89,16 @@ export default function Chat() {
     socketRef.current.emit("join", { userId: user._id });
 
     socketRef.current.on("receiveMessage", (msg) => {
-      setMessages(prev => {
-        const updated = [...prev, msg];
-        if (chatUser?.conversationId === msg.conversationId) {
+      if (chatUser?.conversationId === msg.conversationId) {
+        setMessages(prev => {
+          const updated = [...prev, msg];
           messagesCache.current[msg.conversationId] = updated;
-        }
-        return updated;
-      });
+          return updated;
+        });
+      }
       updateMessage(msg);
     });
+
 
 
     socketRef.current.on("seenMessage", ({ conversationId }) => {
@@ -816,11 +817,11 @@ export default function Chat() {
 
               <div className="flex items-center justify-center gap-x-5 self-end ml-auto">
 
-                <button
+                <Link href={`/call/${chatUser.conversationId}`}
                   className="cursor-pointer size-9 bg-red-600 flex items-center justify-center rounded-full text-white"
                 >
                   <IoCall className="text-2xl" />
-                </button>
+                </Link>
 
 
 
