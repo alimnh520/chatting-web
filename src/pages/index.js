@@ -787,7 +787,7 @@ export default function Chat() {
         </aside>
 
         {
-          chatUser && (<main className={`flex-1 max-h-[calc(100vh-50px)] mb-0 flex flex-col ${mobileView && isMobile ? 'hidden' : 'flex'} overflow-hidden transition-all duration-300 relative`}>
+          chatUser && (<main className={`flex-1 max-h-100vh mb-0 flex flex-col ${mobileView && isMobile ? 'hidden' : 'flex'} overflow-hidden transition-all duration-300 relative`}>
 
             <div className="sticky sm:top-0 top-0 bg-white z-10 flex items-center gap-3 border-b border-gray-200 px-5 py-3 backdrop-blur">
               <IoIosArrowBack className={`text-2xl ${fullView ? 'rotate-0' : 'rotate-0 sm:rotate-180'} transition-all duration-300 cursor-pointer`} onClick={() => {
