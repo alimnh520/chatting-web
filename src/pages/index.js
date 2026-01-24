@@ -427,20 +427,6 @@ export default function Chat() {
 
     const convId = chatUser.conversationId;
 
-    setHistory(prev =>
-      prev.map(conv =>
-        conv.conversationId === convId
-          ? {
-            ...conv,
-            unreadCount: {
-              ...conv.unreadCount,
-              [user._id]: 0
-            }
-          }
-          : conv
-      )
-    );
-
     if (messagesCache.current[convId]) {
       setLoadMessages(false);
       setMessages(messagesCache.current[convId]);
