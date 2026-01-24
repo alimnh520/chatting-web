@@ -66,32 +66,22 @@ export default function handler(req, res) {
             });
 
 
-            // Join conversation room
-            socket.on("join-call-room", ({ conversationId, userId }) => {
-                socket.join(conversationId);
-                onlineUsers.set(userId, socket.id);
-                console.log(`User ${userId} joined room ${conversationId}`);
+            socket.on("start-call", ({ conversationId, from, to }) => {
+                io.to(to).emit("incoming-call", { conversationId, from });
             });
 
-            // Call Offer
             socket.on("call-offer", ({ conversationId, offer, from }) => {
                 socket.to(conversationId).emit("call-offer", { offer, from });
             });
 
-            // Call Answer
             socket.on("call-answer", ({ conversationId, answer, from }) => {
                 socket.to(conversationId).emit("call-answer", { answer, from });
             });
 
-            // ICE Candidate
             socket.on("ice-candidate", ({ conversationId, candidate, from }) => {
                 socket.to(conversationId).emit("ice-candidate", { candidate, from });
             });
 
-            // End Call
-            socket.on("end-call", ({ conversationId }) => {
-                io.to(conversationId).emit("call-ended");
-            });
 
 
             socket.on("disconnect", async () => {
