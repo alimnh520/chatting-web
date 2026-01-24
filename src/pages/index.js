@@ -108,19 +108,6 @@ export default function Chat() {
             : msg
         )
       );
-      setHistory(prev =>
-        prev.map(conv =>
-          conv.conversationId === conversationId
-            ? {
-              ...conv,
-              unreadCount: {
-                ...conv.unreadCount,
-                [user._id]: 0
-              }
-            }
-            : conv
-        )
-      );
     });
 
     socketRef.current.on("messageDeleted", ({ messageId }) => {
@@ -159,19 +146,8 @@ export default function Chat() {
     const isMe = msg.senderId === user._id;
     const otherUserId = isMe ? msg.receiverId : msg.senderId;
 
-    const otherUser =
-      allUser.find(u => u._id === otherUserId) ||
-      history.find(h => h.userId === otherUserId);
-
-    const username = otherUser?.username || otherUser?.user?.username || "Unknown";
-    const image = otherUser?.image || otherUser?.user?.image || "/avatar.png";
-
-    const lastMessageText =
-      msg.text || (msg.file_url ? "📷 Image/Video" : "📷 File");
-
     setHistory(prev => {
       const prevList = Array.isArray(prev) ? [...prev] : [];
-
       const index = prevList.findIndex(h =>
         h.participants?.includes(msg.senderId) &&
         h.participants?.includes(msg.receiverId)
@@ -179,45 +155,38 @@ export default function Chat() {
 
       if (index !== -1) {
         const old = prevList[index];
-
         const updatedConv = {
           ...old,
-          conversationId: msg.conversationId || old.conversationId,
-          lastMessage: lastMessageText,
+          lastMessage: msg.text || (msg.file_url ? "📷 Image/Video" : "📷 File"),
           lastMessageAt: new Date(),
           lastMessageSenderId: msg.senderId,
           unreadCount: {
             ...old.unreadCount,
-            [user._id]: isMe
-              ? 0
-              : (old.unreadCount?.[user._id] || 0) + 1,
+            [user._id]: chatUser?.conversationId === msg.conversationId ? 0 : (old.unreadCount?.[user._id] || 0) + 1
           },
         };
-
         prevList.splice(index, 1);
-
         return [updatedConv, ...prevList];
       }
-
+      // নতুন conversation
       const newConv = {
         _id: Date.now().toString(),
         conversationId: msg.conversationId || Date.now().toString(),
         participants: [msg.senderId, msg.receiverId],
         userId: otherUserId,
-        username,
-        image,
-        lastActiveAt: otherUser?.lastActiveAt || null,
-        lastMessage: lastMessageText,
+        username: "Unknown",
+        image: "/avatar.png",
+        lastMessage: msg.text || (msg.file_url ? "📷 Image/Video" : "📷 File"),
         lastMessageAt: new Date(),
         lastMessageSenderId: msg.senderId,
         unreadCount: {
           [user._id]: isMe ? 0 : 1,
         },
       };
-
       return [newConv, ...prevList];
     });
   };
+
 
 
   const handleSendMessage = async (customText = null) => {
@@ -437,32 +406,33 @@ export default function Chat() {
 
   useEffect(() => {
     if (!chatUser?._id) return;
-    setLoadMessages(true);
-
-    const convId = chatUser.conversationId;
 
     setHistory(prev =>
       prev.map(conv =>
-        conv.conversationId === convId
+        conv.conversationId === chatUser.conversationId
           ? {
             ...conv,
             unreadCount: {
               ...conv.unreadCount,
-              [user._id]: 0
-            }
+              [user._id]: 0,
+            },
           }
           : conv
       )
     );
+
+    // messages fetch / load
+    setLoadMessages(true);
+    const convId = chatUser.conversationId;
 
     const readMessages = async () => {
       await fetch("/api/message/read", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          conversationId: chatUser.conversationId,
-          userId: user._id
-        })
+          conversationId: convId,
+          userId: user._id,
+        }),
       });
     };
     readMessages();
@@ -475,10 +445,10 @@ export default function Chat() {
 
     const fetchMessage = async () => {
       try {
-        const res = await fetch('/api/message/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ conversationId: convId })
+        const res = await fetch("/api/message/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conversationId: convId }),
         });
 
         const data = await res.json();
@@ -495,6 +465,7 @@ export default function Chat() {
 
     fetchMessage();
   }, [chatUser?._id]);
+
 
 
   // history fetching
