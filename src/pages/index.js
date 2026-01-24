@@ -108,6 +108,19 @@ export default function Chat() {
             : msg
         )
       );
+      setHistory(prev =>
+        prev.map(conv =>
+          conv.conversationId === conversationId
+            ? {
+              ...conv,
+              unreadCount: {
+                ...conv.unreadCount,
+                [user._id]: 0
+              }
+            }
+            : conv
+        )
+      );
     });
 
     socketRef.current.on("messageDeleted", ({ messageId }) => {
