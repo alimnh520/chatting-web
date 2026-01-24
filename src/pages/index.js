@@ -40,14 +40,7 @@ export default function Chat() {
   const longPressTimer = useRef(null);
   const ignoreNextClick = useRef(false);
 
-
-  const [peerConnection, setPeerConnection] = useState(null);
-  const [localStream, setLocalStream] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
-  const [incomingCall, setIncomingCall] = useState(null);
-
+  // call events // call events // call events // call events // call events // call events // call events // call events
 
 
 
@@ -137,25 +130,6 @@ export default function Chat() {
     });
 
     // call events  // call events // call events // call events // call events // call events // call events // call events
-
-    socketRef.current.on("incoming-call", ({ from, video }) => {
-      setIncomingCall({ from, video });
-    });
-    
-
-    socketRef.current.on("call-answer", async ({ answer }) => {
-      if (peerConnection) {
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-      }
-    });
-
-    socketRef.current.on("ice-candidate", async ({ candidate }) => {
-      if (peerConnection) {
-        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-      }
-    });
-
-
 
 
     return () => {
@@ -613,92 +587,6 @@ export default function Chat() {
 
   // call events  // call events // call events // call events // call events // call events // call events // call events // call events
 
-  const startCall = async (video = false) => {
-    if (!chatUser) return;
-
-    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
-    setPeerConnection(pc);
-
-    const stream = await navigator.mediaDevices.getUserMedia({ video, audio: true });
-    setLocalStream(stream);
-    stream.getTracks().forEach(track => pc.addTrack(track, stream));
-    localVideoRef.current.srcObject = stream;
-
-    const remoteStream = new MediaStream();
-    setRemoteStream(remoteStream);
-    pc.ontrack = e => e.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
-
-    pc.onicecandidate = e => {
-      if (e.candidate) {
-        socketRef.current.emit("ice-candidate", {
-          candidate: e.candidate,
-          from: user._id,
-          to: chatUser.userId,
-        });
-      }
-    };
-
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-
-    socketRef.current.emit("call-offer", {
-      offer,
-      from: user._id,
-      to: chatUser.userId,
-    });
-  };
-
-
-  const acceptCall = async () => {
-    if (!incomingCall) return;
-
-    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
-    setPeerConnection(pc);
-
-    // Local stream
-    const stream = await navigator.mediaDevices.getUserMedia({ video: incomingCall.video, audio: true });
-    setLocalStream(stream);
-    stream.getTracks().forEach(track => pc.addTrack(track, stream));
-    localVideoRef.current.srcObject = stream;
-
-    // Remote stream
-    const remoteStream = new MediaStream();
-    setRemoteStream(remoteStream);
-    pc.ontrack = e => e.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
-
-    pc.onicecandidate = e => {
-      if (e.candidate) {
-        socketRef.current.emit("ice-candidate", {
-          candidate: e.candidate,
-          from: user._id,
-          to: incomingCall.from,
-        });
-      }
-    };
-
-    // set remote offer
-    await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
-
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-
-    socketRef.current.emit("call-answer", {
-      answer,
-      from: user._id,
-      to: incomingCall.from,
-    });
-
-    setIncomingCall(null);
-  };
-
-
-  const endCall = () => {
-    if (peerConnection) peerConnection.close();
-    if (localStream) localStream.getTracks().forEach(t => t.stop());
-    setPeerConnection(null);
-    setLocalStream(null);
-    setRemoteStream(null);
-  };
 
 
 
@@ -1187,19 +1075,7 @@ export default function Chat() {
         }
       </div >
 
-       {/* // call events  // call events // call events // call events // call events // call events // call events // call events // call events */}
-
-      {incomingCall && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-80">
-          <p className="text-white text-lg mb-4">
-            Incoming {incomingCall.video ? "Video" : "Audio"} Call...
-          </p>
-          <div className="flex gap-4">
-            <button onClick={acceptCall} className="bg-green-600 px-4 py-2 rounded text-white">Accept</button>
-            <button onClick={() => setIncomingCall(null)} className="bg-red-600 px-4 py-2 rounded text-white">Decline</button>
-          </div>
-        </div>
-      )}
+      {/* // call events  // call events // call events // call events // call events // call events // call events // call events // call events */}
 
 
     </div >
