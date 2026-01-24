@@ -67,21 +67,21 @@ export default function handler(req, res) {
 
 
             // call events
-            socket.on("start-call", ({ from, to, video }) => {
-                // যাকে কল যাচ্ছে
-                io.to(to).emit("incoming-call", { from, video });
+
+            socket.on("call-user", ({ from, to, offer }) => {
+                io.to(to).emit("incoming-call", { from, offer });
             });
 
-            socket.on("call-offer", ({ offer, from, to }) => {
-                io.to(to).emit("call-offer", { offer, from });
+            socket.on("answer-call", ({ to, answer }) => {
+                io.to(to).emit("call-answered", { answer });
             });
 
-            socket.on("call-answer", ({ answer, from, to }) => {
-                io.to(to).emit("call-answer", { answer, from });
+            socket.on("ice-candidate", ({ to, candidate }) => {
+                io.to(to).emit("ice-candidate", { candidate });
             });
 
-            socket.on("ice-candidate", ({ candidate, from, to }) => {
-                io.to(to).emit("ice-candidate", { candidate, from });
+            socket.on("end-call", ({ to }) => {
+                io.to(to).emit("call-ended");
             });
 
 

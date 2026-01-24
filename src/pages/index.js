@@ -42,6 +42,17 @@ export default function Chat() {
 
   // call events // call events // call events // call events // call events // call events // call events // call events
 
+  const [incomingCall, setIncomingCall] = useState(null);
+  const [callAccepted, setCallAccepted] = useState(false);
+  const [callEnded, setCallEnded] = useState(false);
+  const [stream, setStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
+  const [calling, setCalling] = useState(false);
+
+  const localVideoRef = useRef();
+  const remoteVideoRef = useRef();
+  const peerRef = useRef();
+
 
 
   useEffect(() => {
@@ -130,6 +141,25 @@ export default function Chat() {
     });
 
     // call events  // call events // call events // call events // call events // call events // call events // call events
+
+    socketRef.current.on("incoming-call", ({ from, offer }) => {
+      setIncomingCall({ from, offer });
+    });
+
+    socketRef.current.on("call-answered", async ({ answer }) => {
+      await peerRef.current.setRemoteDescription(answer);
+      setCallAccepted(true);
+    });
+
+    socketRef.current.on("ice-candidate", async ({ candidate }) => {
+      if (peerRef.current) {
+        await peerRef.current.addIceCandidate(candidate);
+      }
+    });
+
+    socketRef.current.on("call-ended", () => {
+      endCallCleanup();
+    });
 
 
     return () => {
@@ -587,13 +617,115 @@ export default function Chat() {
 
   // call events  // call events // call events // call events // call events // call events // call events // call events // call events
 
+  const createPeer = (to) => {
+    const peer = new RTCPeerConnection({
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" }
+      ]
+    });
+
+    peer.onicecandidate = (e) => {
+      if (e.candidate) {
+        socketRef.current.emit("ice-candidate", {
+          to,
+          candidate: e.candidate
+        });
+      }
+    };
+
+    peer.ontrack = (e) => {
+      setRemoteStream(e.streams[0]);
+      remoteVideoRef.current.srcObject = e.streams[0];
+    };
+
+    return peer;
+  };
+
+  const callUser = async () => {
+    setCalling(true);
+
+    const localStream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true
+    });
+
+    setStream(localStream);
+    localVideoRef.current.srcObject = localStream;
+
+    const peer = createPeer(chatUser.userId);
+    peerRef.current = peer;
+
+    localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
+
+    const offer = await peer.createOffer();
+    await peer.setLocalDescription(offer);
+
+    socketRef.current.emit("call-user", {
+      from: user._id,
+      to: chatUser.userId,
+      offer
+    });
+  };
+
+  const acceptCall = async () => {
+    setCallAccepted(true);
+
+    const localStream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true
+    });
+
+    setStream(localStream);
+    localVideoRef.current.srcObject = localStream;
+
+    const peer = createPeer(incomingCall.from);
+    peerRef.current = peer;
+
+    localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
+
+    await peer.setRemoteDescription(incomingCall.offer);
+    const answer = await peer.createAnswer();
+    await peer.setLocalDescription(answer);
+
+    socketRef.current.emit("answer-call", {
+      to: incomingCall.from,
+      answer
+    });
+
+    setIncomingCall(null);
+  };
+
+  const rejectCall = () => {
+    setIncomingCall(null);
+  };
+
+  const endCallCleanup = () => {
+    setCallEnded(true);
+    setCallAccepted(false);
+    setCalling(false);
+
+    if (peerRef.current) peerRef.current.close();
+
+    stream?.getTracks().forEach(t => t.stop());
+
+    setStream(null);
+    setRemoteStream(null);
+  };
+
+  const endCall = () => {
+    socketRef.current.emit("end-call", {
+      to: chatUser.userId
+    });
+    endCallCleanup();
+  };
+
 
 
 
   return (
     <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
       <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-gray-400 sm:bg-gray-400" >
-        <aside className={` fixed sm:static top-0 left-0 z-20 h-full transform transition-all duration-300 ease-in-out ${mobileView ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0 w-full backdrop-blur ${fullView ? 'sm:w-80' : 'sm:w-0'} ${mobileView ? 'w-full' : 'w-0'} overflow-hidden border-r border-gray-200`}>
+        <aside className={`fixed sm:static top-0 left-0 z-20 h-full transform transition-all duration-300 ease-in-out ${mobileView ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0 w-full backdrop-blur ${fullView ? 'sm:w-80' : 'sm:w-0'} ${mobileView ? 'w-full' : 'w-0'} overflow-hidden border-r border-gray-200`}>
           <div className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Chats</h2>
@@ -787,7 +919,7 @@ export default function Chat() {
         </aside>
 
         {
-          chatUser && (<main className={`flex-1 max-h-100vh mb-0 flex flex-col ${mobileView && isMobile ? 'hidden' : 'flex'} overflow-hidden transition-all duration-300 relative`}>
+          chatUser && (<main className={`flex-1 mb-0 flex flex-col ${mobileView && isMobile ? 'hidden' : 'flex'} overflow-hidden transition-all duration-300 relative`}>
 
             <div className="sticky sm:top-0 top-0 bg-white z-10 flex items-center gap-3 border-b border-gray-200 px-5 py-3 backdrop-blur">
               <IoIosArrowBack className={`text-2xl ${fullView ? 'rotate-0' : 'rotate-0 sm:rotate-180'} transition-all duration-300 cursor-pointer`} onClick={() => {
@@ -824,14 +956,14 @@ export default function Chat() {
 
                 <button
                   className="cursor-pointer size-9 bg-red-600 flex items-center justify-center rounded-full text-white"
-                  onClick={() => startCall(false)}
+                  onClick={callUser}
                 >
                   <IoCall className="text-2xl" />
                 </button>
 
                 <button
                   className="cursor-pointer size-9 bg-red-600 flex items-center justify-center rounded-full text-white"
-                  onClick={() => startCall(true)}
+                  onClick={callUser}
                 >
                   <IoVideocam className="text-2xl hover:text-green-600" />
                 </button>
@@ -1076,6 +1208,40 @@ export default function Chat() {
       </div >
 
       {/* // call events  // call events // call events // call events // call events // call events // call events // call events // call events */}
+
+      {incomingCall && !callAccepted && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl text-center">
+            <p className="font-bold mb-2">Incoming Call</p>
+            <p>{chatUser?.username}</p>
+
+            <div className="flex gap-4 mt-4">
+              <button className="bg-green-600 px-4 py-2 text-white rounded"
+                onClick={acceptCall}>
+                Accept
+              </button>
+
+              <button className="bg-red-600 px-4 py-2 text-white rounded"
+                onClick={rejectCall}>
+                Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(callAccepted || calling) && (
+        <div className="fixed inset-0 bg-black z-50 flex">
+          <video ref={localVideoRef} autoPlay muted className="w-1/2" />
+          <video ref={remoteVideoRef} autoPlay className="w-1/2" />
+
+          <button onClick={endCall}
+            className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-full">
+            End Call
+          </button>
+        </div>
+      )}
+
 
 
     </div >
