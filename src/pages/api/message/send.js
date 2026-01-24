@@ -18,7 +18,7 @@ export default async function handler(req, res) {
             seen,
             createdAt,
         } = newMessage;
-        
+
 
         if (!conversationId || !messageId || !senderId || !receiverId) {
             return res.status(400).json({ success: false, message: "Missing fields" });
@@ -34,7 +34,10 @@ export default async function handler(req, res) {
             conversation = new History({
                 participants: [senderId, receiverId],
                 conversationId,
-                unreadCount: { [receiverId]: 1 },
+                unreadCount: {
+                    [receiverId]: 1,
+                    [senderId]: 0
+                },
                 lastMessage: text || (file_url ? "📷 Attachment" : ""),
                 lastMessageAt: createdAt || new Date(),
                 lastMessageSenderId: senderId,
@@ -49,6 +52,7 @@ export default async function handler(req, res) {
                         lastMessage: text || (file_url ? "📷 Attachment" : ""),
                         lastMessageAt: createdAt || new Date(),
                         lastMessageSenderId: senderId,
+                        [`unreadCount.${senderId}`]: 0
                     },
                     $inc: {
                         [`unreadCount.${receiverId}`]: 1,

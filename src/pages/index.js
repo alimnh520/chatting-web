@@ -427,6 +427,32 @@ export default function Chat() {
 
     const convId = chatUser.conversationId;
 
+    setHistory(prev =>
+      prev.map(conv =>
+        conv.conversationId === convId
+          ? {
+            ...conv,
+            unreadCount: {
+              ...conv.unreadCount,
+              [user._id]: 0
+            }
+          }
+          : conv
+      )
+    );
+
+    const readMessages = async () => {
+      await fetch("/api/message/read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId: chatUser.conversationId,
+          userId: user._id
+        })
+      });
+    };
+    readMessages();
+
     if (messagesCache.current[convId]) {
       setLoadMessages(false);
       setMessages(messagesCache.current[convId]);
@@ -473,7 +499,6 @@ export default function Chat() {
       const history = data?.history || [];
 
       setHistory(history);
-      setChatUser(history[0]);
     };
 
     fetchHistory();
@@ -554,8 +579,6 @@ export default function Chat() {
   const filteredUsers = allUser?.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
-
-  console.log(history[0]);
 
 
 

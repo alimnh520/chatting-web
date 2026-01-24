@@ -22,13 +22,17 @@ export default async function handler(req, res) {
                         { _id: new ObjectId(otherUserId) }
                     ).select('-password');
 
+                    const obj = conv.toObject();
+
                     return {
-                        ...conv.toObject(),
+                        ...obj,
+                        unreadCount: Object.fromEntries(conv.unreadCount || []),
                         userId: otherUserId,
                         username: otherUser?.username || "",
                         image: otherUser?.image || null,
                         lastActiveAt: otherUser?.lastActiveAt || null
                     };
+
                 })
             );
 
