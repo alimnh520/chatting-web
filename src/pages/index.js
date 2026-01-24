@@ -53,6 +53,7 @@ export default function Chat() {
     if (!mobileView) {
       const handlePopState = (e) => {
         e.preventDefault();
+        setChatUser(null);
         setMobileView(true);
       };
 
@@ -560,7 +561,6 @@ export default function Chat() {
 
 
   const scrollRef = useRef(null);
-
   const prevMessagesLength = useRef(0);
 
   useEffect(() => {
@@ -570,11 +570,29 @@ export default function Chat() {
     const currentMessagesLength = messages.length;
 
     if (currentMessagesLength > prevMessagesLength.current) {
-      scrollEl.scrollTop = scrollEl.scrollHeight;
+      scrollEl.scrollTo({
+        top: scrollEl.scrollHeight,
+        behavior: "smooth",
+      });
     }
 
     prevMessagesLength.current = currentMessagesLength;
   }, [messages]);
+
+  useEffect(() => {
+    prevMessagesLength.current = 0;
+  }, [chatUser?.conversationId]);
+
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    setTimeout(() => {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }, 50);
+  }, [chatUser?.conversationId]);
+
 
   const filteredUsers = allUser?.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
@@ -785,6 +803,7 @@ export default function Chat() {
               <IoIosArrowBack className={`text-2xl ${fullView ? 'rotate-0' : 'rotate-0 sm:rotate-180'} transition-all duration-300 cursor-pointer`} onClick={() => {
                 setFullView(!fullView);
                 if (window.innerWidth < 660) {
+                  setChatUser(null);
                   setMobileView(true);
                 }
               }} />
@@ -874,7 +893,8 @@ export default function Chat() {
                         {!isSender && <img src={chatUser.image} alt="user" className="w-5 h-5 mt-px rounded-full object-center object-cover" />}
 
                         <div
-                          className={`rounded-2xl px-3 py-2 text-sm shadow-sm ${isSender ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-900"}`}
+                          className={`select-none rounded-2xl px-3 py-2 text-sm shadow-sm ${isSender ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-900"
+                            }`}
                           onMouseDown={(e) => {
                             e.stopPropagation();
                             handlePressStart(msg);
