@@ -107,20 +107,6 @@ export default function Chat() {
             : msg
         )
       );
-
-      setHistory(prev =>
-        prev.map(conv =>
-          conv.conversationId === conversationId
-            ? {
-              ...conv,
-              unreadCount: {
-                ...conv.unreadCount,
-                [user._id]: 0
-              }
-            }
-            : conv
-        )
-      );
     });
 
     socketRef.current.on("messageDeleted", ({ messageId }) => {
@@ -583,6 +569,9 @@ export default function Chat() {
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
 
+  console.log(history[0]);
+
+
 
   return (
     <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
@@ -772,7 +761,6 @@ export default function Chat() {
                       {conv.unreadCount[user._id] > 99 ? "99+" : conv.unreadCount[user._id]}
                     </span>
                   )}
-
 
                 </button>
               );

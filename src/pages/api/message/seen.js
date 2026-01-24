@@ -17,12 +17,6 @@ export default async function handler(req, res) {
             { $set: { seen: true, seenAt: new Date() } }
         );
 
-        await History.updateOne(
-            { conversationId },
-            { $set: { [`unreadCount.${userId}`]: 0 } }
-        );
-
-
         res.status(200).json({ success: true });
     } catch (err) {
         console.error(err);
