@@ -66,20 +66,22 @@ export default function handler(req, res) {
             });
 
 
-            socket.on("start-call", ({ conversationId, from, to }) => {
-                io.to(to).emit("incoming-call", { conversationId, from });
+            // call events
+            socket.on("start-call", ({ from, to, video }) => {
+                // যাকে কল যাচ্ছে
+                io.to(to).emit("incoming-call", { from, video });
             });
 
-            socket.on("call-offer", ({ conversationId, offer, from }) => {
-                socket.to(conversationId).emit("call-offer", { offer, from });
+            socket.on("call-offer", ({ offer, from, to }) => {
+                io.to(to).emit("call-offer", { offer, from });
             });
 
-            socket.on("call-answer", ({ conversationId, answer, from }) => {
-                socket.to(conversationId).emit("call-answer", { answer, from });
+            socket.on("call-answer", ({ answer, from, to }) => {
+                io.to(to).emit("call-answer", { answer, from });
             });
 
-            socket.on("ice-candidate", ({ conversationId, candidate, from }) => {
-                socket.to(conversationId).emit("ice-candidate", { candidate, from });
+            socket.on("ice-candidate", ({ candidate, from, to }) => {
+                io.to(to).emit("ice-candidate", { candidate, from });
             });
 
 
