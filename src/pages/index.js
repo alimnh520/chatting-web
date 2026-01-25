@@ -145,8 +145,6 @@ export default function Chat() {
 
 
   const updateMessage = (msg) => {
-    console.log('updated message is : ', msg);
-
     const isMe = msg.senderId === user._id;
     const otherUserId = isMe ? msg.receiverId : msg.senderId;
     const otherUser = allUser.find(u => u._id === otherUserId);
@@ -715,13 +713,13 @@ export default function Chat() {
                     <p className="truncate font-medium">{conv.username}</p>
 
                     <div className={`flex items-center gap-2`}>
-                      <p className="truncate text-xs text-gray-500 max-w-28">
+                      <p className="truncate text-xs max-w-28">
                         {conv?.lastMessageSenderId === user?._id
                           ? `You: ${conv.lastMessage}`
                           : conv.lastMessage}
                       </p>
 
-                      <p className="text-[10px] text-gray-400">
+                      <p className="text-[10px]">
                         {isToday
                           ? lastMsgDate.toLocaleTimeString([], {
                             hour: "2-digit",
