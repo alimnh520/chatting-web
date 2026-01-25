@@ -179,13 +179,19 @@ export default function Chat() {
       }
 
       // ===== CREATE NEW =====
-      const otherUser =
-        allUser.find(u => u._id === otherUserId) || {
+      let otherUser =
+        allUser.find(u => u._id === otherUserId) ||
+        (chatUser?.userId === otherUserId ? chatUser : null);
+
+      if (!otherUser) {
+        otherUser = {
           _id: otherUserId,
           username: "Unknown",
           image: "/user.jpg",
           lastActiveAt: null
         };
+      }
+
 
       const newConv = {
         _id: Date.now().toString(),
