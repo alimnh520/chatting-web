@@ -54,6 +54,38 @@ export default function Chat() {
   const remoteVideoRef = useRef(null);
   const peerRef = useRef(null);
 
+  // useState হুকস এ যোগ করুন:
+  const [showLocalVideo, setShowLocalVideo] = useState(true);
+  const [showRemoteVideo, setShowRemoteVideo] = useState(false);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+
+  // call events useEffect এ যোগ করুন:
+  useEffect(() => {
+    // যখন remote stream আসে
+    if (remoteStream) {
+      console.log("🌐 Remote stream updated:", remoteStream);
+      setShowRemoteVideo(true);
+
+      // ভিডিও প্লে করার চেষ্টা করুন
+      setTimeout(() => {
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.play()
+            .then(() => console.log("✅ Remote video playing"))
+            .catch(err => console.error("❌ Remote video play error:", err));
+        }
+      }, 500);
+    }
+  }, [remoteStream]);
+
+  // যখন local stream আসে
+  useEffect(() => {
+    if (stream) {
+      console.log("📱 Local stream updated:", stream);
+      setShowLocalVideo(true);
+    }
+  }, [stream]);
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -654,132 +686,177 @@ export default function Chat() {
 
   // call events  // call events // call events // call events // call events // call events // call events // call events // call events
 
-  // createPeer ফাংশনে এই লাইন যোগ করুন:
   const createPeer = (to) => {
+    console.log("🔧 Creating peer connection for:", to);
+
     const configuration = {
       iceServers: [
+        // Google STUN servers
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' }
-      ]
+        { urls: 'stun:stun4.l.google.com:19302' },
+
+        // Additional STUN servers
+        { urls: 'stun:stun.voipbuster.com' },
+        { urls: 'stun:stun.voipstunt.com' },
+
+        // Free TURN servers (for NAT traversal)
+        {
+          urls: 'turn:openrelay.metered.ca:80',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:turn.bistri.com:80',
+          credential: 'homeo',
+          username: 'homeo'
+        }
+      ],
+      iceTransportPolicy: 'all', // Try both relay and host candidates
+      iceCandidatePoolSize: 10
     };
 
+    console.log("⚙️ Using ICE servers:", configuration.iceServers);
+
     const peer = new RTCPeerConnection(configuration);
+
+    console.log("✅ Peer connection created");
 
     // Handle ICE candidates
     peer.onicecandidate = (event) => {
       if (event.candidate) {
-        console.log("📤 Sending ICE candidate to", to);
+        console.log("📤 ICE candidate generated - Type:", event.candidate.type);
+        console.log("📤 Candidate:", event.candidate.candidate.substring(0, 100) + "...");
+
         socketRef.current.emit("ice-candidate", {
           from: user._id,
           to: to,
           candidate: event.candidate
         });
+      } else {
+        console.log("✅ ICE gathering complete");
       }
     };
 
-    // Handle remote stream
+    // Handle ICE gathering state
+    peer.onicegatheringstatechange = () => {
+      console.log("📡 ICE gathering state:", peer.iceGatheringState);
+    };
+
+    // Handle ICE connection state
+    peer.oniceconnectionstatechange = () => {
+      console.log("🧊 ICE connection state:", peer.iceConnectionState);
+
+      switch (peer.iceConnectionState) {
+        case 'checking':
+          console.log("🔄 Checking ICE connection...");
+          break;
+        case 'connected':
+          console.log("✅ ICE connected successfully!");
+          break;
+        case 'completed':
+          console.log("✅ ICE completed!");
+          break;
+        case 'failed':
+          console.error("❌ ICE connection failed");
+          break;
+        case 'disconnected':
+          console.warn("⚠️ ICE disconnected");
+          break;
+        case 'closed':
+          console.log("🔒 ICE connection closed");
+          break;
+      }
+    };
+
+    // Handle remote stream - এইটা খুবই গুরুত্বপূর্ণ!
     peer.ontrack = (event) => {
-      console.log("🎬 Remote track received:", event.streams);
-      if (event.streams && event.streams[0]) {
+      console.log("🎬 ontrack event fired!");
+      console.log("Event details:", event);
+
+      if (event.streams && event.streams.length > 0) {
+        console.log("📹 Remote streams found:", event.streams.length);
+        console.log("First stream tracks:", event.streams[0].getTracks());
+
+        const remoteStream = event.streams[0];
+
+        // Check what kind of tracks we received
+        const videoTracks = remoteStream.getVideoTracks();
+        const audioTracks = remoteStream.getAudioTracks();
+
+        console.log(`🎥 Video tracks: ${videoTracks.length}`);
+        console.log(`🎵 Audio tracks: ${audioTracks.length}`);
+
         if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = event.streams[0];
+          remoteVideoRef.current.srcObject = remoteStream;
+          console.log("✅ Remote video srcObject set");
+
+          // Play the video
+          remoteVideoRef.current.play()
+            .then(() => console.log("▶️ Remote video playing"))
+            .catch(err => console.error("❌ Error playing remote video:", err));
         }
-        setRemoteStream(event.streams[0]);
+
+        setRemoteStream(remoteStream);
+      } else if (event.track) {
+        console.log("🎵 Individual track received:", event.track.kind);
+        // Create a new stream for the track
+        const newStream = new MediaStream([event.track]);
+
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = newStream;
+          console.log(`✅ ${event.track.kind} track set to video element`);
+        }
+        setRemoteStream(newStream);
       }
     };
 
-    setTimeout(() => {
-      if (peerRef.current === peer) { // Check it's still the current peer
-        pendingCandidates.current.forEach(candidate => {
-          try {
-            peer.addIceCandidate(new RTCIceCandidate(candidate))
-              .then(() => console.log("✅ Added pending ICE candidate"))
-              .catch(err => console.error("Error adding pending ICE candidate:", err));
-          } catch (err) {
-            console.error("Error creating ICE candidate:", err);
-          }
-        });
-        pendingCandidates.current = []; // Clear after adding
-      }
-    }, 1000);
+    // Handle connection state
+    peer.onconnectionstatechange = () => {
+      console.log("🔗 Peer connection state:", peer.connectionState);
+    };
+
+    // Handle signaling state
+    peer.onsignalingstatechange = () => {
+      console.log("📡 Signaling state:", peer.signalingState);
+    };
 
     return peer;
   };
 
 
-  const callUser = async () => {
-    if (!chatUser?.userId) {
-      alert("Please select a user to call");
+
+  const acceptCall = async () => {
+    if (!incomingCall) {
+      console.error("❌ No incoming call to accept");
       return;
     }
 
-    try {
-      setCalling(true);
-
-      // Get local media stream
-      const localStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: true
-      });
-
-      setStream(localStream);
-
-      // Set local video stream
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = localStream;
-        localVideoRef.current.muted = true; // Important: mute local
-      }
-
-      // Create peer connection
-      const peer = createPeer(chatUser.userId);
-      peerRef.current = peer;
-
-      // Add local tracks to peer connection
-      localStream.getTracks().forEach(track => {
-        console.log("Adding track:", track.kind);
-        peer.addTrack(track, localStream);
-      });
-
-      // Create and set local description
-      const offer = await peer.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true
-      });
-
-      await peer.setLocalDescription(new RTCSessionDescription(offer));
-
-      // Send offer to other user
-      socketRef.current.emit("call-user", {
-        from: user._id,
-        to: chatUser.userId,
-        offer: offer
-      });
-
-      console.log("📞 Call initiated to:", chatUser.userId);
-
-    } catch (error) {
-      console.error("Error calling user:", error);
-      alert("Error starting call: " + error.message);
-      setCalling(false);
-    }
-  };
-
-
-  const acceptCall = async () => {
-    if (!incomingCall) return;
+    console.log("📞 Accepting call from:", incomingCall.from);
+    console.log("📝 Offer received:", incomingCall.offer);
 
     try {
       // Get local media stream FIRST
+      console.log("🎥 Requesting local media...");
       const localStream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true
       });
+
+      console.log("✅ Local media acquired");
+      console.log("📹 Local tracks:", localStream.getTracks());
 
       setStream(localStream);
 
@@ -787,26 +864,35 @@ export default function Chat() {
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = localStream;
         localVideoRef.current.muted = true;
+        console.log("🎥 Local video set");
       }
 
       // Create peer connection
+      console.log("🔗 Creating peer for answer...");
       const peer = createPeer(incomingCall.from);
-      peerRef.current = peer; // ✅ এটি সেট করতে ভুলবেন না!
+      peerRef.current = peer; // ✅ এই লাইন যোগ করুন!
 
       // Add local tracks to peer connection
       localStream.getTracks().forEach(track => {
-        console.log("Adding track in acceptCall:", track.kind);
+        console.log(`➕ Adding ${track.kind} track to peer`);
         peer.addTrack(track, localStream);
       });
 
       // Set remote description from offer
+      console.log("📝 Setting remote description...");
       await peer.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
+      console.log("✅ Remote description set");
 
       // Create and set local description (answer)
+      console.log("📝 Creating answer...");
       const answer = await peer.createAnswer();
+      console.log("📝 Answer created:", answer);
+
       await peer.setLocalDescription(new RTCSessionDescription(answer));
+      console.log("✅ Local description set");
 
       // Send answer to caller
+      console.log("📤 Sending answer to:", incomingCall.from);
       socketRef.current.emit("answer-call", {
         to: incomingCall.from,
         answer: answer
@@ -815,17 +901,14 @@ export default function Chat() {
       setCallAccepted(true);
       setIncomingCall(null);
 
-      console.log("📞 Call accepted from:", incomingCall.from);
+      console.log("✅ Call accepted successfully");
 
     } catch (error) {
-      console.error("Error accepting call:", error);
+      console.error("❌ Error accepting call:", error);
       alert("Error accepting call: " + error.message);
     }
   };
 
-  const rejectCall = () => {
-    setIncomingCall(null);
-  };
 
   const endCallCleanup = () => {
     if (peerRef.current) {
@@ -859,37 +942,163 @@ export default function Chat() {
   };
 
   const endCall = () => {
-    socketRef.current.emit("end-call", {
-      to: chatUser.userId
-    });
-    setIncomingCall(false);
+    console.log("📞 Ending call...");
+
+    if (chatUser?.userId) {
+      socketRef.current.emit("end-call", {
+        to: chatUser.userId
+      });
+    }
+
     endCallCleanup();
+
+    setCallAccepted(false);
+    setCalling(false);
+    setCallEnded(true);
+    setIncomingCall(null);
+    setStream(null);
+    setRemoteStream(null);
+    setShowLocalVideo(false);
+    setShowRemoteVideo(false);
+    setIsVideoEnabled(true);
+    setIsAudioEnabled(true);
+    pendingCandidates.current = [];
+
+    console.log("✅ Call ended successfully");
   };
 
   // Voice call
   const handleVoiceCall = async () => {
+    if (!chatUser?.userId) {
+      alert("Please select a user to call");
+      return;
+    }
+
+    console.log("🎤 Starting voice call to:", chatUser.userId);
+
     try {
       setCalling(true);
 
+      // Get audio only stream
       const localStream = await navigator.mediaDevices.getUserMedia({
-        video: false, // Voice call only
+        video: false,
         audio: true
       });
 
+      console.log("🎤 Audio stream acquired");
       setStream(localStream);
 
-      // Rest of the call logic...
-      // (similar to callUser but without video)
+      // ✅ ভয়েস কলেও localVideoRef সেট করুন (কিন্তু শুধু black screen দেখাবে)
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = null; // ভিডিও নেই
+        // অথবা একটি কালো স্ক্রিন দেখাতে পারেন
+        const blackCanvas = document.createElement('canvas');
+        blackCanvas.width = 640;
+        blackCanvas.height = 480;
+        const context = blackCanvas.getContext('2d');
+        context.fillStyle = 'black';
+        context.fillRect(0, 0, blackCanvas.width, blackCanvas.height);
+
+        const blackStream = blackCanvas.captureStream(0);
+        localVideoRef.current.srcObject = blackStream;
+        localVideoRef.current.muted = true;
+      }
+
+      // Create peer connection for voice
+      const peer = createPeer(chatUser.userId);
+      peerRef.current = peer;
+
+      // Add audio track
+      localStream.getTracks().forEach(track => {
+        peer.addTrack(track, localStream);
+      });
+
+      // Create offer (audio only)
+      const offer = await peer.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: false // No video for voice call
+      });
+
+      await peer.setLocalDescription(new RTCSessionDescription(offer));
+
+      // Send offer
+      socketRef.current.emit("call-user", {
+        from: user._id,
+        to: chatUser.userId,
+        offer: offer
+      });
+
+      console.log("🎤 Voice call initiated");
+
     } catch (error) {
-      console.error("Voice call error:", error);
+      console.error("🎤 Voice call error:", error);
+      alert("Voice call error: " + error.message);
+      setCalling(false);
     }
   };
 
   // Video call
   const handleVideoCall = async () => {
-    callUser(); // This is already video call
-  };
+    if (!chatUser?.userId) {
+      alert("Please select a user to call");
+      return;
+    }
 
+    console.log("📹 Starting video call to:", chatUser.userId);
+
+    try {
+      setCalling(true);
+
+      // Get video and audio stream
+      const localStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        },
+        audio: true
+      });
+
+      console.log("📹 Video stream acquired");
+      setStream(localStream);
+
+      // Set local video
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = localStream;
+        localVideoRef.current.muted = true;
+      }
+
+      // Create peer connection
+      const peer = createPeer(chatUser.userId);
+      peerRef.current = peer; // ✅ এই লাইন যোগ করুন!
+
+      // Add tracks
+      localStream.getTracks().forEach(track => {
+        peer.addTrack(track, localStream);
+      });
+
+      // Create offer
+      const offer = await peer.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true
+      });
+
+      await peer.setLocalDescription(new RTCSessionDescription(offer));
+
+      // Send offer
+      socketRef.current.emit("call-user", {
+        from: user._id,
+        to: chatUser.userId,
+        offer: offer
+      });
+
+      console.log("📹 Video call initiated");
+
+    } catch (error) {
+      console.error("📹 Video call error:", error);
+      alert("Video call error: " + error.message);
+      setCalling(false);
+    }
+  };
 
   useEffect(() => {
     console.log("Stream:", stream);
@@ -1386,64 +1595,155 @@ export default function Chat() {
 
       {/* // call events  // call events // call events // call events // call events // call events // call events // call events // call events */}
 
-      {incomingCall && !callAccepted && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl text-center">
-            <p className="font-bold mb-2">Incoming Call</p>
-            <p>{chatUser?.username}</p>
 
-            <div className="flex gap-4 mt-4">
-              <button className="bg-green-600 px-4 py-2 text-white rounded"
-                onClick={acceptCall}>
+      {incomingCall && !callAccepted && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-8 rounded-2xl text-center text-white max-w-md w-full mx-4">
+            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-4xl">
+              📞
+            </div>
+            <p className="text-2xl font-bold mb-2">Incoming Call</p>
+            <p className="text-lg mb-1">{chatUser?.username}</p>
+            <p className="text-gray-400 mb-6">is calling you...</p>
+
+            <div className="flex gap-4 justify-center">
+              <button
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-full flex items-center gap-2 font-semibold transition-all"
+                onClick={rejectCall}
+              >
+                <span className="text-xl">✗</span>
+                Decline
+              </button>
+
+              <button
+                className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-full flex items-center gap-2 font-semibold transition-all"
+                onClick={acceptCall}
+              >
+                <span className="text-xl">✓</span>
                 Accept
               </button>
-
-              <button className="bg-red-600 px-4 py-2 text-white rounded"
-                onClick={rejectCall}>
-                Reject
-              </button>
             </div>
+
+            <p className="text-gray-500 text-sm mt-6">
+              {peerRef.current ? 'Connecting...' : 'Waiting for your response'}
+            </p>
           </div>
         </div>
       )}
 
+
       {(callAccepted || calling) && (
         <div className="fixed inset-0 bg-black z-50 flex flex-col">
-          <div className="flex-1 flex">
-            {/* Local Video */}
-            <div className="w-1/2 relative">
-              <video
-                ref={localVideoRef}
-                autoPlay
-                muted
-                playsInline
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute bottom-2 left-2 text-white bg-black bg-opacity-50 px-2 py-1 rounded">
-                You
+          <div className="flex-1 flex flex-col md:flex-row relative">
+
+            {/* Local Video (Always show if available) */}
+            {showLocalVideo && stream && (
+              <div className="w-full md:w-1/2 relative bg-gray-900">
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full h-full object-contain"
+                  style={{ transform: 'scaleX(-1)' }}
+                />
+                <div className="absolute bottom-4 left-4 text-white bg-black bg-opacity-70 px-3 py-1 rounded-lg">
+                  You {stream?.getVideoTracks().length ? "📹" : "🎤"}
+                  {!isVideoEnabled && " (Video off)"}
+                  {!isAudioEnabled && " (Muted)"}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Remote Video */}
-            <div className="w-1/2 relative">
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute bottom-2 left-2 text-white bg-black bg-opacity-50 px-2 py-1 rounded">
-                {chatUser?.username}
-              </div>
+            <div className={`w-full ${showLocalVideo ? 'md:w-1/2' : 'md:w-full'} relative bg-gray-800`}>
+              {showRemoteVideo && remoteStream ? (
+                <>
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-contain"
+                  />
+                  <div className="absolute bottom-4 left-4 text-white bg-black bg-opacity-70 px-3 py-1 rounded-lg">
+                    {chatUser?.username} {remoteStream?.getVideoTracks().length ? "📹" : "🎤"}
+                  </div>
+                </>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-white">
+                  <div className="text-center">
+                    <div className="w-20 h-20 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-xl font-semibold mb-2">Connecting to {chatUser?.username}...</p>
+                    <p className="text-gray-300">
+                      {peerRef.current?.iceConnectionState === 'checking'
+                        ? 'Checking connection...'
+                        : peerRef.current?.iceConnectionState === 'connected'
+                          ? 'Connected! Waiting for media...'
+                          : 'Establishing connection...'}
+                    </p>
+                    <div className="mt-4 flex flex-col gap-2">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${peerRef.current?.connectionState === 'connected' ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'}`}></div>
+                        <span>Peer: {peerRef.current?.connectionState || 'connecting'}</span>
+                      </div>
+                      <div className="flex items-center justify-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${peerRef.current?.iceConnectionState === 'connected' || peerRef.current?.iceConnectionState === 'completed' ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'}`}></div>
+                        <span>ICE: {peerRef.current?.iceConnectionState || 'gathering'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          <button
-            onClick={endCall}
-            className="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-full hover:bg-red-700"
-          >
-            End Call
-          </button>
+          {/* Call Controls */}
+          <div className="bg-black bg-opacity-80 p-4 flex justify-center items-center gap-6">
+            {/* Video Toggle */}
+            <button
+              onClick={() => {
+                if (stream) {
+                  const videoTrack = stream.getVideoTracks()[0];
+                  if (videoTrack) {
+                    videoTrack.enabled = !videoTrack.enabled;
+                    setIsVideoEnabled(videoTrack.enabled);
+                    console.log("🎥 Video", videoTrack.enabled ? "enabled" : "disabled");
+                  }
+                }
+              }}
+              className={`${isVideoEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'} text-white p-3 rounded-full flex items-center justify-center`}
+              title={isVideoEnabled ? "Turn off video" : "Turn on video"}
+            >
+              {isVideoEnabled ? "📹" : "📵"}
+            </button>
+
+            {/* Audio Toggle */}
+            <button
+              onClick={() => {
+                if (stream) {
+                  const audioTrack = stream.getAudioTracks()[0];
+                  if (audioTrack) {
+                    audioTrack.enabled = !audioTrack.enabled;
+                    setIsAudioEnabled(audioTrack.enabled);
+                    console.log("🎤 Audio", audioTrack.enabled ? "enabled" : "disabled");
+                  }
+                }
+              }}
+              className={`${isAudioEnabled ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white p-3 rounded-full flex items-center justify-center`}
+              title={isAudioEnabled ? "Mute" : "Unmute"}
+            >
+              {isAudioEnabled ? "🎤" : "🔇"}
+            </button>
+
+            {/* End Call Button */}
+            <button
+              onClick={endCall}
+              className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-full flex items-center gap-2 font-semibold"
+            >
+              <span className="text-xl">📞</span>
+              End Call
+            </button>
+          </div>
         </div>
       )}
 
