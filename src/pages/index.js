@@ -30,6 +30,7 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [file, setFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const [deleteBtn, setDeleteBtn] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState(false);
@@ -145,6 +146,8 @@ export default function Chat() {
 
 
   const updateMessage = (msg) => {
+    console.log('updated message is : ', msg);
+
     const isMe = msg.senderId === user._id;
     const otherUserId = isMe ? msg.receiverId : msg.senderId;
     const otherUser = allUser.find(u => u._id === otherUserId);
@@ -583,6 +586,82 @@ export default function Chat() {
   );
 
   // call events  // call events // call events // call events // call events // call events // call events // call events // call events
+
+
+  useEffect(() => {
+    if (user && allUser.length > 0) {
+      setIsLoading(false);
+    }
+  }, [user, allUser]);
+
+  if (isLoading) {
+    return (
+      <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
+        <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-gray-200 sm:bg-gray-400">
+          {/* লোডিং স্কেলিটন UI */}
+          <div className="fixed sm:static top-0 left-0 z-20 h-full w-full sm:w-80 backdrop-blur overflow-hidden border-r border-gray-200">
+            {/* হেডার লোডিং */}
+            <div className="p-4 pb-2">
+              <div className="flex items-center justify-between">
+                <div className="h-8 w-32 bg-gray-300 rounded animate-pulse"></div>
+                <div className="h-11 w-11 bg-gray-300 rounded-full animate-pulse"></div>
+              </div>
+              <div className="mt-3">
+                <div className="h-10 w-full bg-gray-300 rounded-xl animate-pulse"></div>
+              </div>
+            </div>
+
+            {/* চ্যাট লিস্ট লোডিং */}
+            <div className="h-[calc(100%-92px)] overflow-y-auto p-4 space-y-4">
+              {[1, 2, 3, 4, 5].map((item) => (
+                <div key={item} className="flex items-center gap-3">
+                  <div className="h-12 w-12 bg-gray-300 rounded-full animate-pulse"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-24 bg-gray-300 rounded animate-pulse"></div>
+                    <div className="h-3 w-32 bg-gray-300 rounded animate-pulse"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* মেইন চ্যাট এরিয়া লোডিং */}
+          <div className="flex-1 flex flex-col">
+            {/* হেডার লোডিং */}
+            <div className="sticky top-0 bg-white z-10 flex items-center gap-3 border-b border-gray-200 px-5 py-3">
+              <div className="h-8 w-8 bg-gray-300 rounded animate-pulse"></div>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 bg-gray-300 rounded-full animate-pulse"></div>
+                <div className="space-y-2">
+                  <div className="h-4 w-32 bg-gray-300 rounded animate-pulse"></div>
+                  <div className="h-3 w-24 bg-gray-300 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* মেসেজ এরিয়া লোডিং */}
+            <div className="flex-1 p-4 space-y-4">
+              <div className="flex justify-start">
+                <div className="h-12 w-48 bg-gray-300 rounded-2xl animate-pulse"></div>
+              </div>
+              <div className="flex justify-end">
+                <div className="h-12 w-40 bg-indigo-300 rounded-2xl animate-pulse"></div>
+              </div>
+              <div className="flex justify-start">
+                <div className="h-12 w-36 bg-gray-300 rounded-2xl animate-pulse"></div>
+              </div>
+            </div>
+
+            {/* ইনপুট ফিল্ড লোডিং */}
+            <div className="border-t border-gray-200 p-3">
+              <div className="h-12 w-full bg-gray-300 rounded-2xl animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
