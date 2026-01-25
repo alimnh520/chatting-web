@@ -88,15 +88,13 @@ export default function Chat() {
     socketRef.current.emit("join", { userId: user._id });
 
     socketRef.current.on("receiveMessage", (msg) => {
-      const convId = msg.conversationId;
-      const existing = messagesCache.current[convId] || [];
-
-      if (existing.some(m => m.messageId === msg.messageId)) return;
-      setMessages(prev => {
-        const updated = [...prev, msg];
-        messagesCache.current[convId] = updated;
-        return updated;
-      });
+      if (chatUser?.conversationId === msg.conversationId) {
+        setMessages(prev => {
+          const updated = [...prev, msg];
+          messagesCache.current[msg.conversationId] = updated;
+          return updated;
+        });
+      }
       updateMessage(msg);
     });
 
