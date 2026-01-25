@@ -87,13 +87,15 @@ export default function Chat() {
     socketRef.current.emit("join", { userId: user._id });
 
     socketRef.current.on("receiveMessage", (msg) => {
-      if (chatUser?.conversationId === msg.conversationId) {
-        setMessages(prev => {
-          const updated = [...prev, msg];
-          messagesCache.current[msg.conversationId] = updated;
-          return updated;
-        });
-      }
+      const convId = msg.conversationId;
+      const existing = messagesCache.current[convId] || [];
+
+      if (existing.some(m => m.messageId === msg.messageId)) return;
+      setMessages(prev => {
+        const updated = [...prev, msg];
+        messagesCache.current[convId] = updated;
+        return updated;
+      });
       updateMessage(msg);
     });
 
@@ -144,7 +146,7 @@ export default function Chat() {
 
   const updateMessage = (msg) => {
     console.log('updated message is : ', msg);
-    
+
     const isMe = msg.senderId === user._id;
     const otherUserId = isMe ? msg.receiverId : msg.senderId;
     const otherUser = allUser.find(u => u._id === otherUserId);
@@ -246,19 +248,20 @@ export default function Chat() {
       file_id = uploadResult.public_id;
     }
 
+    const messageId = Date.now().toString();
     const optimisticMessage = {
-      _id: Date.now().toString(),
+      _id: "temp-" + messageId,
+      messageId,
       conversationId: chatUser.conversationId,
-      messageId: Date.now().toString(),
       senderId: user._id,
       receiverId: chatUser?.userId,
       text: messageText,
       file_url,
       file_id,
-      file_type: '',
       seen: false,
       createdAt: new Date(),
     };
+
 
     setInput("");
     setFile(null);
