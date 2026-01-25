@@ -67,29 +67,6 @@ export default function handler(req, res) {
 
             // notification events can be added here
 
-
-            // call events
-
-            socket.on("call-user", ({ from, to, offer }) => {
-                io.to(to).emit("incoming-call", { from, offer });
-            });
-
-            socket.on("answer-call", ({ to, answer }) => {
-                console.log("📤 Sending answer to:", to);
-                io.to(to).emit("call-answered", { answer });
-            });
-
-            socket.on("ice-candidate", ({ from, to, candidate }) => {
-                io.to(to).emit("ice-candidate", { from, candidate });
-            });
-
-
-            socket.on("end-call", ({ to }) => {
-                io.to(to).emit("call-ended");
-            });
-
-
-
             socket.on("disconnect", async () => {
                 const entry = [...onlineUsers.entries()].find(([_, socketId]) => socketId === socket.id);
                 if (entry) {
