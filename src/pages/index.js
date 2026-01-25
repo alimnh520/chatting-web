@@ -159,7 +159,8 @@ export default function Chat() {
       setCallAccepted(true);
     });
 
-    socketRef.current.on("ice-candidate", async ({ candidate }) => {
+    socketRef.current.on("ice-candidate", async ({ from, candidate }) => {
+
       if (peerRef.current) {
         await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
       } else {
@@ -168,9 +169,9 @@ export default function Chat() {
     });
 
 
+
     socketRef.current.on("call-ended", () => {
       endCallCleanup();
-      setIncomingCall(false);
     });
 
 
@@ -628,7 +629,7 @@ export default function Chat() {
 
 
   // call events  // call events // call events // call events // call events // call events // call events // call events // call events
-  
+
   const createPeer = (to) => {
     const peer = new RTCPeerConnection({
       iceServers: [
@@ -641,9 +642,14 @@ export default function Chat() {
       ]
     });
 
+    peer.oniceconnectionstatechange = () => {
+      console.log("🧊 ICE STATE:", peer.iceConnectionState);
+    };
+
     peer.onicecandidate = (e) => {
       if (e.candidate) {
         socketRef.current.emit("ice-candidate", {
+          from: user._id,
           to,
           candidate: e.candidate
         });
@@ -746,9 +752,9 @@ export default function Chat() {
     socketRef.current.emit("end-call", {
       to: chatUser.userId
     });
+    setIncomingCall(false);
     endCallCleanup();
   };
-
 
 
 

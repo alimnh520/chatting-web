@@ -77,9 +77,10 @@ export default function handler(req, res) {
                 io.to(to).emit("call-answered", { answer });
             });
 
-            socket.on("ice-candidate", ({ to, candidate }) => {
-                io.to(to).emit("ice-candidate", { candidate });
+            socket.on("ice-candidate", ({ from, to, candidate }) => {
+                io.to(to).emit("ice-candidate", { from, candidate });
             });
+
 
             socket.on("end-call", ({ to }) => {
                 io.to(to).emit("call-ended");
