@@ -633,11 +633,11 @@ export default function Chat() {
   const createPeer = (to) => {
     const peer = new RTCPeerConnection({
       iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
+        { urls: 'stun:stun.l.google.com:19302' },
         {
-          urls: "turn:openrelay.metered.ca:80",
-          username: "openrelayproject",
-          credential: "openrelayproject"
+          urls: 'turn:numb.viagenie.ca',
+          username: 'webrtc@live.com',
+          credential: 'muazkh'
         }
       ]
     });
@@ -700,10 +700,17 @@ export default function Chat() {
   const acceptCall = async () => {
     setCallAccepted(true);
 
-    const localStream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true
-    });
+    let localStream;
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+    } catch (err) {
+      alert("❌ Camera or Microphone not available: " + err.message);
+      console.error(err);
+      return;
+    }
 
     setStream(localStream);
     localVideoRef.current.srcObject = localStream;
@@ -760,7 +767,7 @@ export default function Chat() {
 
   return (
     <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
-      <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-gray-400 sm:bg-gray-400" >
+      <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-gray-200 sm:bg-gray-400" >
         <aside className={`fixed sm:static top-0 left-0 z-20 h-full transform transition-all duration-300 ease-in-out ${mobileView ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0 w-full backdrop-blur ${fullView ? 'sm:w-80' : 'sm:w-0'} ${mobileView ? 'w-full' : 'w-0'} overflow-hidden border-r border-gray-200`}>
           <div className="p-4 pb-2">
             <div className="flex items-center justify-between">
