@@ -1100,6 +1100,22 @@ export default function Chat() {
     }
   };
 
+  const rejectCall = () => {
+    console.log("📞 Rejecting call...");
+
+    if (incomingCall?.from) {
+      socketRef.current.emit("reject-call", {
+        to: incomingCall.from
+      });
+    }
+
+    setIncomingCall(null);
+    setCalling(false);
+
+    // Optional: Show a notification
+    console.log("❌ Call rejected");
+  };
+
   useEffect(() => {
     console.log("Stream:", stream);
     console.log("Remote Stream:", remoteStream);
