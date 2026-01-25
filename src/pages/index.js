@@ -589,7 +589,7 @@ export default function Chat() {
 
 
   useEffect(() => {
-    if (user && allUser.length > 0) {
+    if (user && allUser?.length > 0) {
       setIsLoading(false);
     }
   }, [user, allUser]);
