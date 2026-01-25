@@ -1,21 +1,41 @@
-self.addEventListener('push', function (event) {
-    const data = event.data.json();
-    const title = data.title || 'New Message';
+self.addEventListener("push", function (event) {
+    let data = {};
+    if (event.data) {
+        data = event.data.json();
+    }
+
+    const title = data.title || "New Message";
     const options = {
-        body: data.body,
-        icon: data.icon || '/icon-512.png', // sender image
-        badge: data.badge || '/icon-512.png',
-        data: { url: data.url || '/' },
-        vibrate: [200, 100, 200], // হালকা vibration
-        requireInteraction: true, // নোটিফিকেশন ইউজার ক্লিক না করলে নিজে চলে যাবে না
-        silent: false, // ফোনের default ringtone off নয়
+        body: data.body || "",
+        icon: data.icon || "/avatar.png",
+        badge: "/favicon.ico",
+        tag: data.tag || Date.now(),
+        timestamp: data.timestamp || Date.now(),
+        data: {
+            conversationId: data.conversationId,
+        },
     };
 
-    event.waitUntil(self.registration.showNotification(title, options));
+    event.waitUntil(
+        self.registration.showNotification(title, options)
+    );
 });
 
-self.addEventListener('notificationclick', function (event) {
+self.addEventListener("notificationclick", function (event) {
     event.notification.close();
-    const url = event.notification.data.url;
-    event.waitUntil(clients.openWindow(url));
+
+    event.waitUntil(
+        clients.matchAll({ type: "window" }).then(clientList => {
+            for (const client of clientList) {
+                if ("focus" in client) {
+                    client.focus();
+                    client.postMessage({ conversationId: event.notification.data.conversationId });
+                    return;
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow("/");
+            }
+        })
+    );
 });

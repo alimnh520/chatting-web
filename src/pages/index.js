@@ -93,50 +93,22 @@ export default function Chat() {
 
   // notification permission   // notification permission  // notification permission  // notification permission  // notification permission
 
-  const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) return;
-
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      console.log('Notification permission granted.');
-    } else {
-      console.log('Notification permission denied.');
-    }
-  };
-
   useEffect(() => {
-    requestNotificationPermission();
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(reg => console.log('Service Worker Registered:', reg))
-        .catch(err => console.error('SW Registration Failed:', err));
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/service-worker.js")
+        .then(reg => console.log("Service Worker registered", reg))
+        .catch(err => console.error("SW registration failed", err));
     }
-  }, []);
 
-
-  // notification helper
-  const showNotification = (msg) => {
-    if (Notification.permission !== 'granted') return;
-
-    const audio = new Audio("/sounds/notify.mp3");
-    audio.play().catch(err => console.error("Audio play failed:", err));
-
-    navigator.serviceWorker.getRegistration().then(reg => {
-      if (reg) {
-        reg.showNotification(msg.senderName, {
-          body: msg.text || "📷 Image/Video",
-          icon: msg.senderImage || "/avatar.png",
-          badge: "/favicon.ico",
-          data: { url: `/chat/${msg.senderId}` },
-          requireInteraction: true,
-          vibrate: [200, 100, 200],
-        });
+    // Service Worker থেকে message নেওয়া
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      const { conversationId } = event.data;
+      if (conversationId) {
+        const conv = history.find(h => h.conversationId === conversationId);
+        if (conv) setChatUser(conv);
       }
     });
-  };
-
-
+  }, []);
 
 
   // socket events // socket events// socket events// socket events// socket events// socket events// socket events// socket events// socket events
@@ -149,14 +121,29 @@ export default function Chat() {
     socketRef.current.emit("join", { userId: user._id });
 
     socketRef.current.on("receiveMessage", (msg) => {
-      if (chatUser?.conversationId === msg.conversationId) {
-        setMessages(prev => {
-          const updated = [...prev, msg];
-          messagesCache.current[msg.conversationId] = updated;
-          return updated;
-        });
-      }
       updateMessage(msg);
+
+      if (!chatUser || chatUser.conversationId !== msg.conversationId) {
+        if (notificationSound.current) {
+          notificationSound.current.currentTime = 0;
+          notificationSound.current.play();
+        }
+
+        // Service Worker notification
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            title: allUser.find(u => u._id === msg.senderId)?.username || "Unknown",
+            body: msg.text || "📷 Image/Video",
+            icon: allUser.find(u => u._id === msg.senderId)?.image || "/avatar.png",
+            tag: msg.conversationId,
+            timestamp: new Date(msg.createdAt).getTime(),
+            conversationId: msg.conversationId,
+          });
+        } else {
+          // fallback browser notification
+          showBrowserNotification(msg);
+        }
+      }
     });
 
 
@@ -367,13 +354,6 @@ export default function Chat() {
     updateMessage(optimisticMessage);
 
     socketRef.current.emit("sendMessage", { message: optimisticMessage });
-
-    showNotification({
-      senderName: user?._username || "Unknown",
-      senderImage: user?.image || "/icon-512.png",
-      text: messageText || (file_url ? "📷 Image/Video" : "📷 File"),
-      receiverId: chatUser?.userId,
-    });
 
     try {
       const res = await fetch("/api/message/send", {
