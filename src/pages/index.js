@@ -171,7 +171,6 @@ export default function Chat() {
         prevList.splice(index, 1);
         return [updatedConv, ...prevList];
       }
-      // নতুন conversation
       const newConv = {
         _id: Date.now().toString(),
         conversationId: msg.conversationId || Date.now().toString(),
@@ -181,7 +180,7 @@ export default function Chat() {
         image: chatUser.image || '/user.jpg',
         lastMessage: msg.text || (msg.file_url ? "📷 Image/Video" : "📷 File"),
         lastMessageAt: new Date(),
-        lastActiveAt : chatUser.lastActiveAt,
+        lastActiveAt: chatUser.lastActiveAt,
         lastMessageSenderId: msg.senderId,
         unreadCount: {
           [user._id]: isMe ? 0 : 1,
@@ -266,6 +265,8 @@ export default function Chat() {
     setFile(null);
 
     setMessages(prev => [...prev, optimisticMessage]);
+    socketRef.current.emit("sendMessage", { message: optimisticMessage });
+    updateMessage(optimisticMessage);
 
     const convId = chatUser.conversationId;
     const existingCache = messagesCache.current[convId] || [];
@@ -273,10 +274,6 @@ export default function Chat() {
     if (!isDuplicate) {
       messagesCache.current[convId] = [...existingCache, optimisticMessage];
     }
-
-    updateMessage(optimisticMessage);
-
-    socketRef.current.emit("sendMessage", { message: optimisticMessage });
 
     try {
       const res = await fetch("/api/message/send", {
