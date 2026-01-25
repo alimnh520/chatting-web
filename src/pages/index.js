@@ -262,8 +262,9 @@ export default function Chat() {
 
     setInput("");
     setFile(null);
-    setMessages(prev => [...prev, optimisticMessage]);
     socketRef.current.emit("sendMessage", { message: optimisticMessage });
+    setMessages(prev => [...prev, optimisticMessage]);
+    updateMessage(optimisticMessage);
 
     const convId = chatUser.conversationId;
     const existingCache = messagesCache.current[convId] || [];
