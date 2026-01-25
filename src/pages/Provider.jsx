@@ -10,15 +10,6 @@ export default function AppProvider({ children }) {
     const router = useRouter();
 
     useEffect(() => {
-        if ("Notification" in window) {
-            Notification.requestPermission().then(permission => {
-                console.log("Notification permission:", permission);
-            });
-        }
-    }, []);
-
-
-    useEffect(() => {
         fetch("/api/socket");
     }, []);
 
