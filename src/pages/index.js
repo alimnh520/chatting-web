@@ -143,9 +143,10 @@ export default function Chat() {
 
 
   const updateMessage = (msg) => {
+    console.log('updated message is : ', msg);
+    
     const isMe = msg.senderId === user._id;
     const otherUserId = isMe ? msg.receiverId : msg.senderId;
-    const otherUser = allUser.find(u => u._id === (msg.senderId === user._id ? msg.receiverId : msg.senderId));
     setHistory(prev => {
       const prevList = Array.isArray(prev) ? [...prev] : [];
       const index = prevList.findIndex(h =>
@@ -262,7 +263,6 @@ export default function Chat() {
     setFile(null);
     setMessages(prev => [...prev, optimisticMessage]);
     socketRef.current.emit("sendMessage", { message: optimisticMessage });
-    updateMessage(optimisticMessage);
 
     const convId = chatUser.conversationId;
     const existingCache = messagesCache.current[convId] || [];
