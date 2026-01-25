@@ -147,13 +147,20 @@ export default function Chat() {
     });
 
     socketRef.current.on("call-answered", async ({ answer }) => {
-      await peerRef.current.setRemoteDescription(answer);
+
+      if (!peerRef.current) {
+        console.error("❌ peerRef missing");
+        return;
+      }
+
+      await peerRef.current.setRemoteDescription(new RTCSessionDescription(answer));
       setCallAccepted(true);
     });
 
+
     socketRef.current.on("ice-candidate", async ({ candidate }) => {
       if (peerRef.current) {
-        await peerRef.current.addIceCandidate(candidate);
+        await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
       }
     });
 
@@ -616,11 +623,11 @@ export default function Chat() {
 
 
   // call events  // call events // call events // call events // call events // call events // call events // call events // call events
-
   const createPeer = (to) => {
     const peer = new RTCPeerConnection({
       iceServers: [
-        { urls: "stun:stun.l.google.com:19302" }
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" }
       ]
     });
 
@@ -634,12 +641,14 @@ export default function Chat() {
     };
 
     peer.ontrack = (e) => {
-      setRemoteStream(e.streams[0]);
+      console.log("🔥 GOT REMOTE STREAM", e.streams);
       remoteVideoRef.current.srcObject = e.streams[0];
+      setRemoteStream(e.streams[0]);
     };
 
     return peer;
   };
+
 
   const callUser = async () => {
     setCalling(true);
@@ -683,7 +692,8 @@ export default function Chat() {
 
     localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
 
-    await peer.setRemoteDescription(incomingCall.offer);
+    await peer.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
+
     const answer = await peer.createAnswer();
     await peer.setLocalDescription(answer);
 
@@ -1232,8 +1242,8 @@ export default function Chat() {
 
       {(callAccepted || calling) && (
         <div className="fixed inset-0 bg-black z-50 flex">
-          <video ref={localVideoRef} autoPlay muted className="w-1/2" />
-          <video ref={remoteVideoRef} autoPlay className="w-1/2" />
+          <video ref={localVideoRef} autoPlay muted playsInline className="w-1/2" />
+          <video ref={remoteVideoRef} autoPlay playsInline className="w-1/2" />
 
           <button onClick={endCall}
             className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-full">
@@ -1241,7 +1251,6 @@ export default function Chat() {
           </button>
         </div>
       )}
-
 
 
     </div >
