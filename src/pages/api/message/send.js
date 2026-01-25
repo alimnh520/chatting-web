@@ -43,7 +43,7 @@ export default async function handler(req, res) {
                 lastMessageSenderId: senderId,
             });
 
-            await conversation.save();
+            // await conversation.save();
         } else {
             await History.updateOne(
                 { _id: conversation._id },
@@ -75,7 +75,7 @@ export default async function handler(req, res) {
             createdAt: createdAt || new Date(),
         });
 
-        await saveMessage.save();
+        // await saveMessage.save();
 
         return res.status(200).json({
             success: true,
