@@ -179,7 +179,7 @@ export default function Chat() {
         image: otherUser.image || '/user.jpg',
         lastMessage: msg.text || (msg.file_url ? "📷 Image/Video" : "📷 File"),
         lastMessageAt: new Date(),
-        lastActiveAt: chatUser.lastActiveAt,
+        lastActiveAt: otherUser.lastActiveAt,
         lastMessageSenderId: msg.senderId,
         unreadCount: {
           [user._id]: isMe ? 0 : 1,
