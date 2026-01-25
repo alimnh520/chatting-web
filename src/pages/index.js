@@ -106,6 +106,7 @@ export default function Chat() {
 
   useEffect(() => {
     requestNotificationPermission();
+
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/service-worker.js')
         .then(reg => console.log('Service Worker Registered:', reg))
@@ -113,21 +114,23 @@ export default function Chat() {
     }
   }, []);
 
+
   // notification helper
   const showNotification = (msg) => {
     if (Notification.permission !== 'granted') return;
 
-    // play ringtone
     const audio = new Audio("/sounds/notify.mp3");
     audio.play().catch(err => console.error("Audio play failed:", err));
 
     navigator.serviceWorker.getRegistration().then(reg => {
       if (reg) {
-        reg.showNotification(msg.receiverId, {
+        reg.showNotification(msg.senderName, {
           body: msg.text || "📷 Image/Video",
           icon: msg.senderImage || "/avatar.png",
           badge: "/favicon.ico",
           data: { url: `/chat/${msg.senderId}` },
+          requireInteraction: true,
+          vibrate: [200, 100, 200],
         });
       }
     });

@@ -65,6 +65,8 @@ export default function handler(req, res) {
                 io.to(to).emit("user-stop-typing", { from });
             });
 
+            // notification events can be added here
+
 
             // call events
 
