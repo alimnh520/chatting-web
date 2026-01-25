@@ -147,6 +147,7 @@ export default function Chat() {
     
     const isMe = msg.senderId === user._id;
     const otherUserId = isMe ? msg.receiverId : msg.senderId;
+    const otherUser = allUser.find(u => u._id === otherUserId);
     setHistory(prev => {
       const prevList = Array.isArray(prev) ? [...prev] : [];
       const index = prevList.findIndex(h =>
@@ -580,10 +581,6 @@ export default function Chat() {
   );
 
   // call events  // call events // call events // call events // call events // call events // call events // call events // call events
-
-  console.log(history[0]);
-
-
 
   return (
     <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
