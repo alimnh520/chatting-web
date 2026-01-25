@@ -90,6 +90,45 @@ export default function Chat() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) return;
+
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      console.log('Notification permission granted.');
+    } else {
+      console.log('Notification permission denied.');
+    }
+  };
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(reg => {
+          console.log('Service Worker Registered:', reg);
+          requestNotificationPermission();
+        })
+        .catch(err => console.error('SW Registration Failed:', err));
+    }
+  }, []);
+
+  const showNotification = (msg) => {
+    if (Notification.permission !== 'granted') return;
+
+    navigator.serviceWorker.getRegistration().then(reg => {
+      if (reg) {
+        reg.showNotification(msg.username, {
+          body: msg.text || '📷 Image/Video',
+          icon: msg.image || '/icon-512.png',
+          vibrate: [100, 50, 100],
+          sound: '/sounds/notify.mp3',
+          badge: '/favicon.ico',
+          data: { url: `/chat/${msg.senderId}` }
+        });
+      }
+    });
+  };
+
 
   useEffect(() => {
     if (!user?._id) return;
@@ -105,11 +144,16 @@ export default function Chat() {
           messagesCache.current[msg.conversationId] = updated;
           return updated;
         });
+      } else {
+        showNotification({
+          senderName: msg.username || "Unknown",
+          senderImage: msg.image,
+          text: msg.text,
+          senderId: msg.senderId,
+        });
       }
       updateMessage(msg);
     });
-
-
 
     socketRef.current.on("seenMessage", ({ conversationId }) => {
       setMessages(prev =>
