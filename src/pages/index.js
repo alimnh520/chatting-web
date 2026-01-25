@@ -146,18 +146,18 @@ export default function Chat() {
 
 
   const updateMessage = (msg) => {
-    console.log('updated message is : ', msg);
-
     const isMe = msg.senderId === user._id;
     const otherUserId = isMe ? msg.receiverId : msg.senderId;
-    const otherUser = allUser.find(u => u._id === otherUserId);
+
     setHistory(prev => {
       const prevList = Array.isArray(prev) ? [...prev] : [];
+
       const index = prevList.findIndex(h =>
         h.participants?.includes(msg.senderId) &&
         h.participants?.includes(msg.receiverId)
       );
 
+      // ===== UPDATE EXISTING =====
       if (index !== -1) {
         const old = prevList[index];
         const updatedConv = {
@@ -167,30 +167,46 @@ export default function Chat() {
           lastMessageSenderId: msg.senderId,
           unreadCount: {
             ...old.unreadCount,
-            [user._id]: chatUser?.conversationId === msg.conversationId ? 0 : (old.unreadCount?.[user._id] || 0) + 1
+            [user._id]:
+              chatUser?.conversationId === msg.conversationId
+                ? 0
+                : (old.unreadCount?.[user._id] || 0) + 1
           },
         };
+
         prevList.splice(index, 1);
         return [updatedConv, ...prevList];
       }
+
+      // ===== CREATE NEW =====
+      const otherUser =
+        allUser.find(u => u._id === otherUserId) || {
+          _id: otherUserId,
+          username: "Unknown",
+          image: "/user.jpg",
+          lastActiveAt: null
+        };
+
       const newConv = {
         _id: Date.now().toString(),
         conversationId: msg.conversationId || Date.now().toString(),
         participants: [msg.senderId, msg.receiverId],
         userId: otherUserId,
         username: otherUser.username,
-        image: otherUser.image || '/user.jpg',
+        image: otherUser.image || "/user.jpg",
+        lastActiveAt: otherUser.lastActiveAt,
         lastMessage: msg.text || (msg.file_url ? "📷 Image/Video" : "📷 File"),
         lastMessageAt: new Date(),
-        lastActiveAt: otherUser.lastActiveAt,
         lastMessageSenderId: msg.senderId,
         unreadCount: {
           [user._id]: isMe ? 0 : 1,
         },
       };
+
       return [newConv, ...prevList];
     });
   };
+
 
 
 
@@ -640,7 +656,7 @@ export default function Chat() {
             </div>
 
             {/* মেসেজ এরিয়া লোডিং */}
-            <div className="flex-1 p-4 space-y-4">
+            <div className="flex-1 sm:block hidden p-4 space-y-4">
               <div className="flex justify-start">
                 <div className="h-12 w-48 bg-gray-300 rounded-2xl animate-pulse"></div>
               </div>
