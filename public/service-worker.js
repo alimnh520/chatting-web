@@ -5,9 +5,7 @@ self.addEventListener('push', function (event) {
         body: data.body,
         icon: data.icon || '/icon-512.png',
         badge: data.badge || '/icon-512.png',
-        data: {
-            url: data.url || '/',
-        },
+        data: { url: data.url || '/' },
     };
 
     event.waitUntil(self.registration.showNotification(title, options));

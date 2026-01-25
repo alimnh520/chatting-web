@@ -90,6 +90,9 @@ export default function Chat() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+
+  // notification permission   // notification permission  // notification permission  // notification permission  // notification permission
+
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) return;
 
@@ -102,33 +105,38 @@ export default function Chat() {
   };
 
   useEffect(() => {
+    requestNotificationPermission();
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/service-worker.js')
-        .then(reg => {
-          console.log('Service Worker Registered:', reg);
-          requestNotificationPermission();
-        })
+        .then(reg => console.log('Service Worker Registered:', reg))
         .catch(err => console.error('SW Registration Failed:', err));
     }
   }, []);
 
+  // notification helper
   const showNotification = (msg) => {
     if (Notification.permission !== 'granted') return;
 
+    // play ringtone
+    const audio = new Audio("/sounds/notify.mp3");
+    audio.play().catch(err => console.error("Audio play failed:", err));
+
     navigator.serviceWorker.getRegistration().then(reg => {
       if (reg) {
-        reg.showNotification(msg.username, {
-          body: msg.text || '📷 Image/Video',
-          icon: msg.image || '/icon-512.png',
-          vibrate: [100, 50, 100],
-          sound: '/sounds/notify.mp3',
-          badge: '/icon-512.png',
-          data: { url: `/chat/${msg.senderId}` }
+        reg.showNotification(msg.receiverId, {
+          body: msg.text || "📷 Image/Video",
+          icon: msg.senderImage || "/avatar.png",
+          badge: "/favicon.ico",
+          data: { url: `/chat/${msg.senderId}` },
         });
       }
     });
   };
 
+
+
+
+  // socket events // socket events// socket events// socket events// socket events// socket events// socket events// socket events// socket events
 
   useEffect(() => {
     if (!user?._id) return;
@@ -144,16 +152,11 @@ export default function Chat() {
           messagesCache.current[msg.conversationId] = updated;
           return updated;
         });
-      } else {
-        showNotification({
-          senderName: msg.username || "Unknown",
-          senderImage: msg.image,
-          text: msg.text,
-          senderId: msg.senderId,
-        });
       }
       updateMessage(msg);
     });
+
+
 
     socketRef.current.on("seenMessage", ({ conversationId }) => {
       setMessages(prev =>
@@ -361,6 +364,13 @@ export default function Chat() {
     updateMessage(optimisticMessage);
 
     socketRef.current.emit("sendMessage", { message: optimisticMessage });
+
+    showNotification({
+      senderName: user?._username || "Unknown",
+      senderImage: user?.image || "/icon-512.png",
+      text: messageText || (file_url ? "📷 Image/Video" : "📷 File"),
+      receiverId: chatUser?.userId,
+    });
 
     try {
       const res = await fetch("/api/message/send", {
