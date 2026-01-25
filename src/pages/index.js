@@ -56,6 +56,14 @@ export default function Chat() {
   const peerRef = useRef();
 
 
+  const notificationSound = useRef(null);
+
+  useEffect(() => {
+    notificationSound.current = new Audio("/notify.mp3");
+  }, []);
+
+
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
