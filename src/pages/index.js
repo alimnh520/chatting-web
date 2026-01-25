@@ -146,7 +146,7 @@ export default function Chat() {
 
     const isMe = msg.senderId === user._id;
     const otherUserId = isMe ? msg.receiverId : msg.senderId;
-    const otherUser = allUser.find(u => u._id === msg.receiverId);
+    const otherUser = allUser.find(u => u._id === msg.senderId);
     setHistory(prev => {
       const prevList = Array.isArray(prev) ? [...prev] : [];
       const index = prevList.findIndex(h =>
