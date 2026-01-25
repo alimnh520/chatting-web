@@ -122,7 +122,7 @@ export default function Chat() {
           icon: msg.image || '/icon-512.png',
           vibrate: [100, 50, 100],
           sound: '/sounds/notify.mp3',
-          badge: '/favicon.ico',
+          badge: '/icon-512.png',
           data: { url: `/chat/${msg.senderId}` }
         });
       }
