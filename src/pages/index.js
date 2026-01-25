@@ -97,7 +97,6 @@ export default function Chat() {
       updateMessage(msg);
     });
 
-
     socketRef.current.on("seenMessage", ({ conversationId }) => {
       setMessages(prev =>
         prev.map(msg =>
@@ -144,10 +143,10 @@ export default function Chat() {
 
 
   const updateMessage = (msg) => {
-    console.log(msg);
 
     const isMe = msg.senderId === user._id;
     const otherUserId = isMe ? msg.receiverId : msg.senderId;
+    const otherUser = allUser.find(u => u._id === otherUserId)    
 
     setHistory(prev => {
       const prevList = Array.isArray(prev) ? [...prev] : [];
@@ -176,8 +175,8 @@ export default function Chat() {
         conversationId: msg.conversationId || Date.now().toString(),
         participants: [msg.senderId, msg.receiverId],
         userId: otherUserId,
-        username: chatUser.username,
-        image: chatUser.image || '/user.jpg',
+        username: otherUser.username,
+        image: otherUser.image || '/user.jpg',
         lastMessage: msg.text || (msg.file_url ? "📷 Image/Video" : "📷 File"),
         lastMessageAt: new Date(),
         lastActiveAt: chatUser.lastActiveAt,
@@ -263,7 +262,6 @@ export default function Chat() {
 
     setInput("");
     setFile(null);
-
     setMessages(prev => [...prev, optimisticMessage]);
     socketRef.current.emit("sendMessage", { message: optimisticMessage });
     updateMessage(optimisticMessage);
@@ -585,6 +583,8 @@ export default function Chat() {
 
   // call events  // call events // call events // call events // call events // call events // call events // call events // call events
 
+  console.log(history[0]);
+  
 
 
   return (
