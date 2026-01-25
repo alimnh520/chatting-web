@@ -42,6 +42,8 @@ export default function Chat() {
 
   // call events // call events // call events // call events // call events // call events // call events // call events
 
+  const pendingCandidates = useRef([]);
+
   const [incomingCall, setIncomingCall] = useState(null);
   const [callAccepted, setCallAccepted] = useState(false);
   const [callEnded, setCallEnded] = useState(false);
@@ -157,15 +159,18 @@ export default function Chat() {
       setCallAccepted(true);
     });
 
-
     socketRef.current.on("ice-candidate", async ({ candidate }) => {
       if (peerRef.current) {
         await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+      } else {
+        pendingCandidates.current.push(candidate);
       }
     });
 
+
     socketRef.current.on("call-ended", () => {
       endCallCleanup();
+      setIncomingCall(false);
     });
 
 
@@ -623,11 +628,16 @@ export default function Chat() {
 
 
   // call events  // call events // call events // call events // call events // call events // call events // call events // call events
+  
   const createPeer = (to) => {
     const peer = new RTCPeerConnection({
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" }
+        {
+          urls: "turn:openrelay.metered.ca:80",
+          username: "openrelayproject",
+          credential: "openrelayproject"
+        }
       ]
     });
 
@@ -663,6 +673,11 @@ export default function Chat() {
 
     const peer = createPeer(chatUser.userId);
     peerRef.current = peer;
+    pendingCandidates.current.forEach(c =>
+      peer.addIceCandidate(new RTCIceCandidate(c))
+    );
+    pendingCandidates.current = [];
+
 
     localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
 
@@ -689,6 +704,11 @@ export default function Chat() {
 
     const peer = createPeer(incomingCall.from);
     peerRef.current = peer;
+    pendingCandidates.current.forEach(c =>
+      peer.addIceCandidate(new RTCIceCandidate(c))
+    );
+    pendingCandidates.current = [];
+
 
     localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
 

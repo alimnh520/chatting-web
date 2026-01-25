@@ -73,6 +73,7 @@ export default function handler(req, res) {
             });
 
             socket.on("answer-call", ({ to, answer }) => {
+                console.log("📤 Sending answer to:", to);
                 io.to(to).emit("call-answered", { answer });
             });
 
