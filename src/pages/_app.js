@@ -1,8 +1,14 @@
 import "@/styles/globals.css";
 import Head from "next/head";
 import Provider from "./Provider";
+import { useEffect } from "react";
 
 export default function App({ Component, pageProps }) {
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js");
+    }
+  }, []);
   return (
     <>
       <Head>
