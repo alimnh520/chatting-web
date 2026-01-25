@@ -41,6 +41,19 @@ export default function Chat() {
   const longPressTimer = useRef(null);
   const ignoreNextClick = useRef(false);
 
+  const [realtimeLastSeen, setRealtimeLastSeen] = useState({});
+
+
+  const [, forceUpdate] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      forceUpdate(n => n + 1);
+    }, 60000);
+    return () => clearInterval(t);
+  }, []);
+
+
   // call events // call events // call events // call events // call events // call events // call events // call events
 
 
@@ -126,8 +139,25 @@ export default function Chat() {
     });
 
     socketRef.current.on("online-users", (users) => {
-      setOnlineUsers(users);
+      setOnlineUsers(prev => {
+        // যারা আগে online ছিল
+        const prevOnline = prev || [];
+
+        // যারা এখন offline হয়ে গেল
+        prevOnline.forEach(uid => {
+          if (!users.includes(uid)) {
+            // 🔥 এই moment টাই save করলাম
+            setRealtimeLastSeen(r => ({
+              ...r,
+              [uid]: new Date()
+            }));
+          }
+        });
+
+        return users;
+      });
     });
+
 
     // call events  // call events // call events // call events // call events // call events // call events // call events
 
@@ -506,25 +536,33 @@ export default function Chat() {
     fetchAllUsers();
   }, []);
 
-  const lastActive = (lastActiveAt) => {
-    if (!lastActiveAt) return "Offline";
+  const lastActive = (backendLastActiveAt, userId) => {
+    if (onlineUsers.includes(userId)) {
+      return "Active now";
+    }
+
+    const realtime = realtimeLastSeen[userId];
+
+    const lastTime = realtime || backendLastActiveAt;
+
+    if (!lastTime) return "Offline";
 
     const now = moment();
-    const last = moment(lastActiveAt);
+    const last = moment(lastTime);
 
-    const diffSec = now.diff(last, "seconds");
     const diffMin = now.diff(last, "minutes");
     const diffHour = now.diff(last, "hours");
     const diffDay = now.diff(last, "days");
 
-    if (diffSec < 30) return "exit now";
+    if (diffMin < 1) return "Just now";
     if (diffMin < 60) return `Active ${diffMin}m ago`;
     if (diffHour < 24) return `Active ${diffHour}h ago`;
     if (diffDay === 1) return `Yesterday ${last.format("h:mm A")}`;
     if (diffDay < 7) return `${diffDay} days ago`;
 
-    return "";
+    return "Long time ago";
   };
+
 
 
   const historyActive = (lastActiveAt) => {
@@ -730,7 +768,7 @@ export default function Chat() {
                             )
                               : (
                                 <span className="text-gray-500">
-                                  {lastActive(u.lastActiveAt)}
+                                  {lastActive(u.lastActiveAt, u._id)}
                                 </span>
                               )}
                           </p>
@@ -867,7 +905,7 @@ export default function Chat() {
                         )
                         : (
                           <span className="text-gray-500">
-                            {lastActive(chatUser.lastActiveAt)}
+                            {lastActive(chatUser.lastActiveAt, chatUser.userId)}
                           </span>
                         )}
                     </p>

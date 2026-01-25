@@ -40,7 +40,6 @@ export default function handler(req, res) {
                 io.emit("online-users", Array.from(onlineUsers.keys()));
             });
 
-
             socket.on("sendMessage", ({ message }) => {
                 io.to(message.receiverId).emit("receiveMessage", message);
             });
