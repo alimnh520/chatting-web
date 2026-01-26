@@ -42,7 +42,7 @@ export default function Chat() {
   const ignoreNextClick = useRef(false);
 
   const [realtimeLastSeen, setRealtimeLastSeen] = useState({});
-
+  const soundRef = useRef(null);
 
   const [, forceUpdate] = useState(0);
 
@@ -53,6 +53,9 @@ export default function Chat() {
     return () => clearInterval(t);
   }, []);
 
+  useEffect(() => {
+    soundRef.current = new Audio("/sounds/notify.mp3");
+  }, []);
 
   // call events // call events // call events // call events // call events // call events // call events // call events
 
@@ -101,15 +104,27 @@ export default function Chat() {
     socketRef.current.emit("join", { userId: user._id });
 
     socketRef.current.on("receiveMessage", (msg) => {
-      if (chatUser?.conversationId === msg.conversationId) {
+
+      const isCurrentChatOpen = chatUser?.conversationId === msg.conversationId;
+
+      if (!isCurrentChatOpen) {
+        if (soundRef.current) {
+          soundRef.current.currentTime = 0;
+          soundRef.current.play().catch(() => { });
+        }
+      }
+
+      if (isCurrentChatOpen) {
         setMessages(prev => {
           const updated = [...prev, msg];
           messagesCache.current[msg.conversationId] = updated;
           return updated;
         });
       }
+
       updateMessage(msg);
     });
+
 
     socketRef.current.on("seenMessage", ({ conversationId }) => {
       setMessages(prev =>
@@ -174,8 +189,6 @@ export default function Chat() {
 
 
   const updateMessage = (msg) => {
-    console.log('updated message is : ', msg);
-
     const isMe = msg.senderId === user._id;
     const otherUserId = isMe ? msg.receiverId : msg.senderId;
     const otherUser = allUser.find(u => u._id === otherUserId);
@@ -290,7 +303,6 @@ export default function Chat() {
       seen: false,
       createdAt: new Date(),
     };
-
 
     setInput("");
     setFile(null);
