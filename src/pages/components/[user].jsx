@@ -154,6 +154,18 @@ export default function PublicProfilePage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const handlePopState = (e) => {
+            e.preventDefault();
+            window.history.go(-2);
+        };
+
+        window.addEventListener("popstate", handlePopState);
+
+        return () => window.removeEventListener("popstate", handlePopState);
+    }, []);
+
+
+    useEffect(() => {
         if (!userId) return;
 
         const fetchAllUsers = async () => {
@@ -282,7 +294,7 @@ export default function PublicProfilePage() {
 
                     <div className="max-w-4xl max-h-[80vh] w-full flex flex-col items-center">
                         <img
-                            src={user.image}
+                            src={user.image || '/user.jpg'}
                             alt="Profile preview"
                             className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
                         />
@@ -341,7 +353,7 @@ export default function PublicProfilePage() {
                                         className="relative w-28 h-28 rounded-full border-4 border-white/80 shadow-2xl overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95"
                                     >
                                         <img
-                                            src={user.image}
+                                            src={user.image || '/user.jpg'}
                                             alt={user.username}
                                             className="w-full h-full object-cover"
                                         />
@@ -543,7 +555,7 @@ export default function PublicProfilePage() {
                                         <div className="flex items-center gap-3">
                                             <div className="w-12 h-12 rounded-full overflow-hidden border border-white/20">
                                                 <img
-                                                    src={user.image}
+                                                    src={user.image || '/user.jpg'}
                                                     alt="Profile"
                                                     className="w-full h-full object-cover"
                                                 />
