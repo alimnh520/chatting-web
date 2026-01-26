@@ -773,7 +773,7 @@ export default function Chat() {
 
               </div>
               {isSearch && (
-                <div className="absolute top-10 left-0 w-full h-screen" onClick={() => {
+                <div className="absolute top-10 left-0 w-full h-dvh" onClick={() => {
                   if (isSearch) setIsSearch(false);
                 }}>
                   <div className="w-full relative max-h-80 bg-white rounded-2xl space-y-1.5 shadow-lg border border-gray-200 p-4 overflow-y-auto z-10 scrollbar">
