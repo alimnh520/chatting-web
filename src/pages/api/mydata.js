@@ -1,5 +1,4 @@
 import jwt from "jsonwebtoken";
-import { ObjectId } from "mongodb";
 import cookie from "cookie";
 import User from "@/models/User";
 import { connectDB } from "@/lib/connectDb";
@@ -24,10 +23,7 @@ export default async function handler(req, res) {
         case "GET":
             try {
                 await connectDB();
-                const user = await User.findOne(
-                    { _id: new ObjectId(decodedUser.user_id) },
-                    { projection: { password: 0 } }
-                );
+                const user = await User.findById(decodedUser.user_id).select("-password");
                 return res.status(200).json({ success: true, user });
             } catch (error) {
                 console.log(error)

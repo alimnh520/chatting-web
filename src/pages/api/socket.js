@@ -1,6 +1,6 @@
 import { Server } from "socket.io";
-import { ObjectId } from "mongodb";
 import User from "@/models/User";
+import { connectDB } from "@/lib/connectDb";
 
 export const config = {
     api: {
@@ -10,7 +10,8 @@ export const config = {
 
 const onlineUsers = new Map();
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
+    await connectDB();
     if (!res.socket.server.io) {
 
         console.log("🟢 Socket server started");
@@ -33,7 +34,7 @@ export default function handler(req, res) {
                 onlineSockets[userId] = socket;
 
                 await User.updateOne(
-                    { _id: new ObjectId(userId) },
+                    { _id: userId },
                     { $set: { online: true, lastActiveAt: new Date() } }
                 );
 
@@ -74,7 +75,7 @@ export default function handler(req, res) {
                     delete onlineSockets[userId];
 
                     await User.updateOne(
-                        { _id: new ObjectId(userId) },
+                        { _id: userId },
                         { $set: { online: false, lastActiveAt: new Date() } }
                     );
 

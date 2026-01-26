@@ -1,7 +1,6 @@
 import cloudinary from "@/cloudinary/cloudConfig";
 import { connectDB } from "@/lib/connectDb";
 import User from "@/models/User";
-import { ObjectId } from "mongodb";
 
 export default async function handler(req, res) {
     if (req.method === "PATCH") {
@@ -27,7 +26,7 @@ export default async function handler(req, res) {
 
             if (Object.keys(updateData).length > 0) {
                 await User.updateOne(
-                    { _id: new ObjectId(userId) },
+                    { _id: userId },
                     { $set: updateData }
                 );
             }

@@ -1,6 +1,5 @@
 import History from "@/models/History";
 import User from "@/models/User";
-import { ObjectId } from "mongodb";
 
 export default async function handler(req, res) {
     if (req.method === "POST") {
@@ -19,7 +18,7 @@ export default async function handler(req, res) {
                     const otherUserId = conv.participants.find(id => id !== user_id);
 
                     const otherUser = await User.findOne(
-                        { _id: new ObjectId(otherUserId) }
+                        { _id: otherUserId }
                     ).select('-password');
 
                     const obj = conv.toObject();

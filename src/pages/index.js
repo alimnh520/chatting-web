@@ -938,7 +938,9 @@ export default function Chat() {
               }} />
               {chatUser && (
                 <div className="flex items-center justify-center">
-                  <img src={chatUser.image || '/user.jpg'} className="h-10 w-10 rounded-full object-cover" />
+                  <Link href={`/components/${chatUser.userId}`} >
+                    <img src={chatUser.image || '/user.jpg'} className="h-10 w-10 rounded-full object-cover" />
+                  </Link>
                   <div className="ml-0.5">
                     <p className="font-semibold w-30 truncate">{chatUser.username}</p>
                     <p className="text-xs text-gray-500">
