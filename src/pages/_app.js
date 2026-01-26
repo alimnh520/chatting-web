@@ -25,25 +25,6 @@ export default function App({ Component, pageProps }) {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
   }, []);
 
-  useEffect(() => {
-    if (!deferredPrompt) return;
-
-    const showPrompt = async () => {
-      deferredPrompt.prompt();
-
-      const choiceResult = await deferredPrompt.userChoice;
-      console.log("User choice:", choiceResult.outcome);
-
-      setDeferredPrompt(null);
-    };
-
-    const timeout = setTimeout(() => {
-      showPrompt();
-    }, 2000);
-
-    return () => clearTimeout(timeout);
-  }, [deferredPrompt]);
-
   return (
     <>
       <Head>

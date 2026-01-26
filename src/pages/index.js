@@ -58,7 +58,6 @@ export default function Chat() {
   }, []);
 
 
-
   useEffect(() => {
     if ("Notification" in window) {
       if (Notification.permission === "default") {
