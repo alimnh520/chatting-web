@@ -147,6 +147,7 @@ export default function Chat() {
               badge: "/logo.png",
               tag: msg.conversationId,
               vibrate: [200, 100, 200, 100, 300],
+              sound: "/sounds/notify.mp3",
               data: {
                 conversationId: msg.conversationId,
                 userId: msg.senderId
