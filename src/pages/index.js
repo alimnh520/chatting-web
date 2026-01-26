@@ -746,7 +746,7 @@ export default function Chat() {
 
 
   return (
-    <div className="max-h-dvh w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
+    <div className="min-h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
       <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-gray-200 sm:bg-gray-400" >
         <aside className={`fixed sm:static top-0 left-0 z-20 h-full transform transition-all duration-300 ease-in-out ${mobileView ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0 w-full backdrop-blur ${fullView ? 'sm:w-80' : 'sm:w-0'} ${mobileView ? 'w-full' : 'w-0'} overflow-hidden border-r border-gray-200`}>
           <div className="p-4 pb-2">
