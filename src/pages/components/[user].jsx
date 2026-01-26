@@ -156,14 +156,10 @@ export default function PublicProfilePage() {
     useEffect(() => {
         if (typeof window === "undefined") return;
 
-        // প্রথমে নতুন entry add করি
         window.history.pushState(null, document.title, window.location.href);
 
         const handlePopState = () => {
-            // আবার push করি যাতে আরেকবার popstate ট্রিগার হয়
             window.history.pushState(null, document.title, window.location.href);
-
-            // এবার দুইবার back দিতে চাই
             window.history.go(-2);
         };
 
