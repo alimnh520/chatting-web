@@ -57,7 +57,15 @@ export default function Chat() {
     soundRef.current = new Audio("/sounds/notify.mp3");
   }, []);
 
-  // call events // call events // call events // call events // call events // call events // call events // call events
+
+
+  useEffect(() => {
+    if ("Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    }
+  }, []);
 
 
   useEffect(() => {
@@ -123,6 +131,31 @@ export default function Chat() {
       }
 
       updateMessage(msg);
+
+      if (
+        document.hidden &&
+        Notification.permission === "granted" &&
+        msg.senderId !== user._id
+      ) {
+        const sender = allUser.find(u => u._id === msg.senderId);
+
+        navigator.serviceWorker.getRegistration().then(reg => {
+          if (reg) {
+            reg.showNotification(sender?.username || "New Message", {
+              body: msg.text || "📷 Sent a file",
+              icon: sender?.image || "/user.jpg",
+              badge: "/logo.png",
+              tag: msg.conversationId,
+              vibrate: [200, 100, 200, 100, 300],
+              data: {
+                conversationId: msg.conversationId,
+                userId: msg.senderId
+              }
+            });
+          }
+        });
+      }
+
     });
 
 

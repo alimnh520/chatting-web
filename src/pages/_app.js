@@ -9,6 +9,7 @@ export default function App({ Component, pageProps }) {
       navigator.serviceWorker.register("/sw.js");
     }
   }, []);
+
   return (
     <>
       <Head>
