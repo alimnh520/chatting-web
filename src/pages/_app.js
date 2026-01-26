@@ -8,13 +8,15 @@ export default function App({ Component, pageProps }) {
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js");
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then(() => console.log("✅ Service Worker registered"))
+        .catch((err) => console.log("❌ SW registration failed:", err));
     }
 
-    // 📌 beforeinstallprompt event capture
     const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault(); // default auto show block
-      setDeferredPrompt(e); // save the event
+      e.preventDefault();
+      setDeferredPrompt(e);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -26,11 +28,20 @@ export default function App({ Component, pageProps }) {
   useEffect(() => {
     if (!deferredPrompt) return;
 
-    const interval = setInterval(() => {
+    const showPrompt = async () => {
       deferredPrompt.prompt();
-    }, 10000);
 
-    return () => clearInterval(interval);
+      const choiceResult = await deferredPrompt.userChoice;
+      console.log("User choice:", choiceResult.outcome);
+
+      setDeferredPrompt(null);
+    };
+
+    const timeout = setTimeout(() => {
+      showPrompt();
+    }, 2000);
+
+    return () => clearTimeout(timeout);
   }, [deferredPrompt]);
 
   return (
@@ -38,12 +49,12 @@ export default function App({ Component, pageProps }) {
       <Head>
         <title>My Chat</title>
         <meta name="description" content="Realtime Chat PWA" />
-
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, height=device-height, viewport-fit=cover"
         />
         <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content="#000000" />
       </Head>
 
       <Provider>
