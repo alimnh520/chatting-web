@@ -4,13 +4,9 @@ import { useContext, useEffect, useRef, useState } from "react";
 import moment from "moment";
 import { IoIosArrowBack } from "react-icons/io";
 import { ImCross } from "react-icons/im";
-import { FaImage } from "react-icons/fa";
+import { FaImage, FaHeart, FaCopy, FaSun, FaMoon, FaSearch } from "react-icons/fa";
 import Link from "next/link";
-import { FaHeart } from "react-icons/fa";
-import { IoCall } from "react-icons/io5";
-import { IoVideocam } from "react-icons/io5";
 import { MdDeleteForever } from "react-icons/md";
-import { FaCopy } from "react-icons/fa";
 import { io } from "socket.io-client";
 import { UserContext } from "./Provider";
 
@@ -35,6 +31,7 @@ export default function Chat() {
   const [deleteBtn, setDeleteBtn] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState(false);
   const [msgId, setMsgId] = useState('');
+  const [darkMode, setDarkMode] = useState(true);
   const inputRef = useRef(null);
   const socketRef = useRef(null);
   const messagesCache = useRef({});
@@ -46,6 +43,65 @@ export default function Chat() {
 
   const [, forceUpdate] = useState(0);
 
+  // Theme management
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('chat-theme');
+    if (savedTheme) {
+      setDarkMode(savedTheme === 'dark');
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('chat-theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
+
+  // Theme colors
+  const themeColors = {
+    dark: {
+      bg: 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900',
+      sidebar: 'bg-gray-800/95 backdrop-blur-lg border-gray-700',
+      mainBg: 'bg-gray-900',
+      text: 'text-white',
+      secondaryText: 'text-gray-300',
+      input: 'bg-gray-700 border-gray-600 text-white',
+      messageSender: 'bg-blue-600 text-white',
+      messageReceiver: 'bg-gray-700 text-white',
+      hover: 'hover:bg-gray-700',
+      active: 'bg-gray-700',
+      border: 'border-gray-700',
+      scrollbar: 'scrollbar-dark',
+      searchResults: 'bg-gray-800 border-gray-700',
+      loading: 'bg-gray-700',
+      online: 'text-green-400',
+      offline: 'text-gray-400',
+      unread: 'bg-red-500',
+      deleteModal: 'bg-gray-800'
+    },
+    light: {
+      bg: 'bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50',
+      sidebar: 'bg-white/95 backdrop-blur-lg border-gray-200',
+      mainBg: 'bg-white',
+      text: 'text-gray-900',
+      secondaryText: 'text-gray-600',
+      input: 'bg-white border-gray-300 text-gray-900',
+      messageSender: 'bg-blue-500 text-white',
+      messageReceiver: 'bg-gray-100 text-gray-900',
+      hover: 'hover:bg-gray-100',
+      active: 'bg-blue-50',
+      border: 'border-gray-200',
+      scrollbar: 'scrollbar-light',
+      searchResults: 'bg-white border-gray-200',
+      loading: 'bg-gray-200',
+      online: 'text-green-600',
+      offline: 'text-gray-500',
+      unread: 'bg-red-400',
+      deleteModal: 'bg-white'
+    }
+  };
+
+  const theme = darkMode ? themeColors.dark : themeColors.light;
+
+  // Rest of your useEffect and functions remain exactly the same...
   useEffect(() => {
     const t = setInterval(() => {
       forceUpdate(n => n + 1);
@@ -57,7 +113,6 @@ export default function Chat() {
     soundRef.current = new Audio("/sounds/notify.mp3");
   }, []);
 
-
   useEffect(() => {
     if ("Notification" in window) {
       if (Notification.permission === "default") {
@@ -65,7 +120,6 @@ export default function Chat() {
       }
     }
   }, []);
-
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -83,7 +137,6 @@ export default function Chat() {
 
       return () => window.removeEventListener("popstate", handlePopState);
     }
-
   }, [mobileView]);
 
   useEffect(() => {
@@ -100,9 +153,7 @@ export default function Chat() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-
-  // socket events // socket events// socket events// socket events// socket events// socket events// socket events// socket events// socket events
-
+  // Socket events - keep exactly the same
   useEffect(() => {
     if (!user?._id) return;
 
@@ -111,7 +162,6 @@ export default function Chat() {
     socketRef.current.emit("join", { userId: user._id });
 
     socketRef.current.on("receiveMessage", (msg) => {
-
       const isCurrentChatOpen = chatUser?.conversationId === msg.conversationId;
 
       if (!isCurrentChatOpen) {
@@ -155,9 +205,7 @@ export default function Chat() {
           }
         });
       }
-
     });
-
 
     socketRef.current.on("seenMessage", ({ conversationId }) => {
       setMessages(prev =>
@@ -173,7 +221,6 @@ export default function Chat() {
       setMessages(prev => prev.filter(m => m.messageId !== messageId));
     });
 
-
     socketRef.current.on("user-typing", ({ from }) => {
       if (chatUser && from === chatUser.userId) {
         setIsTyping(true);
@@ -188,27 +235,18 @@ export default function Chat() {
 
     socketRef.current.on("online-users", (users) => {
       setOnlineUsers(prev => {
-        // যারা আগে online ছিল
         const prevOnline = prev || [];
-
-        // যারা এখন offline হয়ে গেল
         prevOnline.forEach(uid => {
           if (!users.includes(uid)) {
-            // 🔥 এই moment টাই save করলাম
             setRealtimeLastSeen(r => ({
               ...r,
               [uid]: new Date()
             }));
           }
         });
-
         return users;
       });
     });
-
-
-    // call events  // call events // call events // call events // call events // call events // call events // call events
-
 
     return () => {
       socketRef.current.off("messageDeleted");
@@ -217,9 +255,7 @@ export default function Chat() {
       socketRef.current.disconnect();
       socketRef.current = null;
     };
-
   }, [user?._id, chatUser?.conversationId]);
-
 
   const updateMessage = (msg) => {
     const isMe = msg.senderId === user._id;
@@ -266,10 +302,7 @@ export default function Chat() {
     });
   };
 
-
-
   const handleSendMessage = async (customText = null) => {
-
     const messageText = customText ?? input;
     if (!messageText && !file) return;
 
@@ -298,9 +331,7 @@ export default function Chat() {
     let file_id = null;
 
     if (file) {
-
       setIsUploading(true);
-
       const formData = new FormData();
       formData.append("file", file);
       formData.append("upload_preset", "form-submit");
@@ -356,14 +387,10 @@ export default function Chat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newMessage: optimisticMessage }),
       });
-
     } catch (err) {
       console.error(err);
     }
   };
-
-
-  // delete message
 
   const handleDeleteMessage = async () => {
     if (!msgId) return;
@@ -375,7 +402,6 @@ export default function Chat() {
     if (lastMessage?.messageId === msgId.messageId) {
       updateMessage({ ...lastMessage, text: "Message deleted" });
     }
-
 
     socketRef.current.emit("deleteMessage", {
       messageId: msgId.messageId,
@@ -392,12 +418,10 @@ export default function Chat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ msg: msgId, userId: user._id }),
       });
-
     } catch (err) {
       console.error(err);
     }
   };
-
 
   const handlePressEnd = () => {
     if (longPressTimer.current) {
@@ -411,13 +435,9 @@ export default function Chat() {
       setMsgId(msg);
       if (navigator.vibrate) navigator.vibrate(30);
       setDeleteBtn(true);
-
       ignoreNextClick.current = true;
     }, 600);
   };
-
-
-  // typing indicator
 
   const typingTimeoutRef = useRef(null);
 
@@ -434,10 +454,6 @@ export default function Chat() {
 
     socketRef.current.emit("typing", { from: user._id, to: chatUser.userId });
   };
-
-
-
-  // message seen 
 
   const markSeen = async () => {
     if (!socketRef.current || !chatUser) return;
@@ -457,7 +473,6 @@ export default function Chat() {
     });
   };
 
-
   useEffect(() => {
     if (!chatUser?.conversationId) return;
     if (messages.length === 0) return;
@@ -470,9 +485,6 @@ export default function Chat() {
       markSeen();
     }
   }, [messages]);
-
-
-  // message fetching
 
   useEffect(() => {
     if (loadMessages) {
@@ -497,7 +509,6 @@ export default function Chat() {
       )
     );
 
-    // messages fetch / load
     setLoadMessages(true);
     const convId = chatUser.conversationId;
 
@@ -542,10 +553,6 @@ export default function Chat() {
     fetchMessage();
   }, [chatUser?._id]);
 
-
-
-  // history fetching
-
   useEffect(() => {
     if (!user?._id) return;
 
@@ -558,15 +565,11 @@ export default function Chat() {
 
       const data = await res.json();
       const history = data?.history || [];
-
       setHistory(history);
     };
 
     fetchHistory();
   }, [user?._id]);
-
-
-  // all users fetching
 
   useEffect(() => {
     const fetchAllUsers = async () => {
@@ -587,7 +590,6 @@ export default function Chat() {
     }
 
     const realtime = realtimeLastSeen[userId];
-
     const lastTime = realtime || backendLastActiveAt;
 
     if (!lastTime) return "Offline";
@@ -608,8 +610,6 @@ export default function Chat() {
     return "Long time ago";
   };
 
-
-
   const historyActive = (lastActiveAt) => {
     if (!lastActiveAt) return "";
 
@@ -626,7 +626,6 @@ export default function Chat() {
 
     return "";
   };
-
 
   const scrollRef = useRef(null);
   const prevMessagesLength = useRef(0);
@@ -661,13 +660,9 @@ export default function Chat() {
     }, 50);
   }, [chatUser?.conversationId]);
 
-
   const filteredUsers = allUser?.filter(u =>
     u.username.toLowerCase().includes(searchInput.toLowerCase())
   );
-
-  // call events  // call events // call events // call events // call events // call events // call events // call events // call events
-
 
   useEffect(() => {
     if (user && allUser?.length > 0) {
@@ -677,65 +672,59 @@ export default function Chat() {
 
   if (isLoading) {
     return (
-      <div className="h-screen w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
-        <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-gray-200 sm:bg-gray-400">
+      <div className={`h-screen w-full ${theme.bg} sm:p-4 ${theme.text}`}>
+        <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex">
           {/* লোডিং স্কেলিটন UI */}
-          <div className="fixed sm:static top-0 left-0 z-20 h-full w-full sm:w-80 backdrop-blur overflow-hidden border-r border-gray-200">
-            {/* হেডার লোডিং */}
+          <div className={`fixed sm:static top-0 left-0 z-20 h-full w-full sm:w-80 backdrop-blur overflow-hidden border-r ${theme.border}`}>
             <div className="p-4 pb-2">
               <div className="flex items-center justify-between">
-                <div className="h-8 w-32 bg-gray-300 rounded animate-pulse"></div>
-                <div className="h-11 w-11 bg-gray-300 rounded-full animate-pulse"></div>
+                <div className={`h-8 w-32 ${theme.loading} rounded animate-pulse`}></div>
+                <div className={`h-11 w-11 ${theme.loading} rounded-full animate-pulse`}></div>
               </div>
               <div className="mt-3">
-                <div className="h-10 w-full bg-gray-300 rounded-xl animate-pulse"></div>
+                <div className={`h-10 w-full ${theme.loading} rounded-xl animate-pulse`}></div>
               </div>
             </div>
 
-            {/* চ্যাট লিস্ট লোডিং */}
             <div className="h-[calc(100%-92px)] overflow-y-auto p-4 space-y-4">
               {[1, 2, 3, 4, 5].map((item) => (
                 <div key={item} className="flex items-center gap-3">
-                  <div className="h-12 w-12 bg-gray-300 rounded-full animate-pulse"></div>
+                  <div className={`h-12 w-12 ${theme.loading} rounded-full animate-pulse`}></div>
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 w-24 bg-gray-300 rounded animate-pulse"></div>
-                    <div className="h-3 w-32 bg-gray-300 rounded animate-pulse"></div>
+                    <div className={`h-4 w-24 ${theme.loading} rounded animate-pulse`}></div>
+                    <div className={`h-3 w-32 ${theme.loading} rounded animate-pulse`}></div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* মেইন চ্যাট এরিয়া লোডিং */}
-          <div className="flex-1 flex flex-col">
-            {/* হেডার লোডিং */}
-            <div className="sticky top-0 bg-white z-10 flex items-center gap-3 border-b border-gray-200 px-5 py-3">
-              <div className="h-8 w-8 bg-gray-300 rounded animate-pulse"></div>
+          <div className={`flex-1 flex flex-col ${theme.mainBg}`}>
+            <div className={`sticky top-0 ${theme.mainBg} z-10 flex items-center gap-3 border-b ${theme.border} px-5 py-3`}>
+              <div className={`h-8 w-8 ${theme.loading} rounded animate-pulse`}></div>
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 bg-gray-300 rounded-full animate-pulse"></div>
+                <div className={`h-10 w-10 ${theme.loading} rounded-full animate-pulse`}></div>
                 <div className="space-y-2">
-                  <div className="h-4 w-32 bg-gray-300 rounded animate-pulse"></div>
-                  <div className="h-3 w-24 bg-gray-300 rounded animate-pulse"></div>
+                  <div className={`h-4 w-32 ${theme.loading} rounded animate-pulse`}></div>
+                  <div className={`h-3 w-24 ${theme.loading} rounded animate-pulse`}></div>
                 </div>
               </div>
             </div>
 
-            {/* মেসেজ এরিয়া লোডিং */}
             <div className="flex-1 sm:block hidden p-4 space-y-4">
               <div className="flex justify-start">
-                <div className="h-12 w-48 bg-gray-300 rounded-2xl animate-pulse"></div>
+                <div className={`h-12 w-48 ${theme.loading} rounded-2xl animate-pulse`}></div>
               </div>
               <div className="flex justify-end">
-                <div className="h-12 w-40 bg-indigo-300 rounded-2xl animate-pulse"></div>
+                <div className={`h-12 w-40 ${theme.messageSender} rounded-2xl animate-pulse`}></div>
               </div>
               <div className="flex justify-start">
-                <div className="h-12 w-36 bg-gray-300 rounded-2xl animate-pulse"></div>
+                <div className={`h-12 w-36 ${theme.loading} rounded-2xl animate-pulse`}></div>
               </div>
             </div>
 
-            {/* ইনপুট ফিল্ড লোডিং */}
-            <div className="border-t border-gray-200 p-3">
-              <div className="h-12 w-full bg-gray-300 rounded-2xl animate-pulse"></div>
+            <div className={`border-t ${theme.border} p-3`}>
+              <div className={`h-12 w-full ${theme.loading} rounded-2xl animate-pulse`}></div>
             </div>
           </div>
         </div>
@@ -743,41 +732,53 @@ export default function Chat() {
     );
   }
 
-
   return (
-    <div className="h-dvh w-full bg-linear-to-br from-[#1f1c2c] to-[#928DAB] sm:p-4 text-black">
-      <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex bg-gray-200 sm:bg-gray-400" >
-        <aside className={`fixed sm:static top-0 left-0 z-20 h-full transform transition-all duration-300 ease-in-out ${mobileView ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0 w-full backdrop-blur ${fullView ? 'sm:w-80' : 'sm:w-0'} ${mobileView ? 'w-full' : 'w-0'} overflow-hidden border-r border-gray-200`}>
+    <div className={`h-dvh w-full ${theme.bg} sm:p-4 ${theme.text}`}>
+      <div className="mx-auto h-full max-w-5xl sm:rounded-2xl shadow-xl overflow-hidden flex">
+        <aside className={`fixed sm:static top-0 left-0 z-20 h-full transform transition-all duration-300 ease-in-out 
+          ${mobileView ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0 w-full backdrop-blur 
+          ${fullView ? 'sm:w-80' : 'sm:w-0'} ${mobileView ? 'w-full' : 'w-0'} overflow-hidden border-r ${theme.border}`}>
+          
           <div className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Chats</h2>
-              <Link href="/components/profile">
-                <img
-                  src={user?.image || '/user.jpg'}
-                  alt={user?.username}
-                  className="h-11 w-11 rounded-full object-cover outline-2 outline-green-600"
-                />
-              </Link>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-yellow-300' : 'bg-gray-200 text-gray-700'}`}
+                >
+                  {darkMode ? <FaSun /> : <FaMoon />}
+                </button>
+                <Link href="/components/profile">
+                  <img
+                    src={user?.image || '/user.jpg'}
+                    alt={user?.username}
+                    className="h-11 w-11 rounded-full object-cover outline-2 outline-green-600"
+                  />
+                </Link>
+              </div>
             </div>
+            
             <div className="mt-3 relative">
               <div className="relative w-full flex items-center justify-center gap-x-1">
                 <input
                   type="text"
                   placeholder="Search Messenger"
-                  className="flex-1 rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                  className={`flex-1 rounded-xl border ${theme.input} px-3 py-2 text-sm outline-none focus:border-blue-500`}
                   value={searchInput}
                   onFocus={() => setIsSearch(true)}
                   onChange={e => setSearchInput(e.target.value)}
                 />
-
+                <FaSearch className={`absolute right-3 ${theme.secondaryText}`} />
               </div>
+              
               {isSearch && (
                 <div className="absolute top-10 left-0 w-full h-screen" onClick={() => {
                   if (isSearch) setIsSearch(false);
                 }}>
-                  <div className="w-full relative max-h-80 bg-white rounded-2xl space-y-1.5 shadow-lg border border-gray-200 p-4 overflow-y-auto z-10 scrollbar">
+                  <div className={`w-full relative max-h-80 ${theme.searchResults} rounded-2xl space-y-1.5 shadow-lg border p-4 overflow-y-auto z-10 ${theme.scrollbar}`}>
                     {filteredUsers?.filter(self => self._id !== user?._id).map(u => (
-                      <div key={u._id} className="flex bg-gray-200 items-center gap-3 p-2 rounded-xl hover:bg-gray-100 cursor-pointer"
+                      <div key={u._id} className={`flex items-center gap-3 p-2 rounded-xl ${theme.hover} cursor-pointer`}
                         onClick={() => {
                           const findHistory = history.find(h => h.participants.includes(u._id) && h.participants.includes(user._id));
                           if (findHistory) {
@@ -804,18 +805,17 @@ export default function Chat() {
                         <img src={u.image || '/user.jpg'} alt={u.username} className="h-10 w-10 rounded-full object-cover" />
                         <div>
                           <p className="font-medium">{u._id === user?._id ? 'You' : u.username}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className={`text-xs ${theme.secondaryText}`}>
                             {onlineUsers.includes(u._id) ? (
-                              <span className="flex items-center gap-1 text-green-600">
+                              <span className={`flex items-center gap-1 ${theme.online}`}>
                                 <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                                 Active now
                               </span>
-                            )
-                              : (
-                                <span className="text-gray-500">
-                                  {lastActive(u.lastActiveAt, u._id)}
-                                </span>
-                              )}
+                            ) : (
+                              <span className={theme.offline}>
+                                {lastActive(u.lastActiveAt, u._id)}
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -825,30 +825,26 @@ export default function Chat() {
               )}
             </div>
           </div>
+          
           <div className="h-[calc(100%-92px)] overflow-y-auto">
             {history.map(conv => {
-
-              const lastMsgDate = conv.lastMessageAt
-                ? new Date(conv.lastMessageAt)
-                : new Date();
-
+              const lastMsgDate = conv.lastMessageAt ? new Date(conv.lastMessageAt) : new Date();
               const today = new Date();
-              const isToday =
-                lastMsgDate.getDate() === today.getDate() &&
+              const isToday = lastMsgDate.getDate() === today.getDate() &&
                 lastMsgDate.getMonth() === today.getMonth() &&
                 lastMsgDate.getFullYear() === today.getFullYear();
 
               return (
                 <button
                   key={conv._id}
-                  className={`w-full flex items-center gap-3 border-b border-b-gray-100 px-4 py-3 text-left hover:bg-indigo-200 ${conv.userId === chatUser?.userId ? "bg-indigo-200" : ""}`}
+                  className={`w-full flex items-center gap-3 border-b ${theme.border} px-4 py-3 text-left ${theme.hover} 
+                    ${conv.userId === chatUser?.userId ? theme.active : ""}`}
                   onClick={() => {
                     const findHistory = history.find(h => h.participants.includes(conv.userId) && h.participants.includes(user._id));
                     setChatUser(findHistory);
                     setMobileView(false);
                   }}
                 >
-
                   <div className="relative h-11 w-11">
                     <img
                       src={conv.image || '/user.jpg'}
@@ -859,10 +855,7 @@ export default function Chat() {
                       {onlineUsers.includes(conv.userId) ? (
                         <span className="inline-block w-3 h-3 bg-green-600 rounded-full"></span>
                       ) : (
-                        <span
-                          className={`bg-green-600 text-[10px] rounded-full text-white inline-flex items-center justify-center ${lastActive(conv.lastActiveAt) ? "px-1" : ""
-                            }`}
-                        >
+                        <span className={`bg-gray-600 text-[10px] rounded-full text-white inline-flex items-center justify-center ${lastActive(conv.lastActiveAt) ? "px-1" : ""}`}>
                           {historyActive(conv.lastActiveAt)}
                         </span>
                       )}
@@ -871,63 +864,33 @@ export default function Chat() {
 
                   <div className="min-w-0 flex flex-col">
                     <p className="truncate font-medium">{conv.username}</p>
-
-                    <div className={`flex items-center gap-2`}>
-                      <p className="truncate text-xs max-w-28">
-                        {conv?.lastMessageSenderId === user?._id
-                          ? `You: ${conv.lastMessage}`
-                          : conv.lastMessage}
+                    <div className="flex items-center gap-2">
+                      <p className={`truncate text-xs max-w-28 ${theme.secondaryText}`}>
+                        {conv?.lastMessageSenderId === user?._id ? `You: ${conv.lastMessage}` : conv.lastMessage}
                       </p>
-
-                      <p className="text-[10px]">
+                      <p className={`text-[10px] ${theme.secondaryText}`}>
                         {isToday
-                          ? lastMsgDate.toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: true
-                          })
-
-                          : lastMsgDate.toLocaleTimeString("en-US", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: true
-                          })
+                          ? lastMsgDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })
+                          : lastMsgDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })
                         }
                       </p>
                     </div>
                   </div>
 
                   {conv.unreadCount?.[user._id] > 0 && (
-                    <span className="
-    ml-auto 
-    min-w-5 
-    h-5 
-    px-1
-    flex 
-    items-center 
-    justify-center 
-    rounded-full 
-    bg-linear-to-r from-red-500 to-pink-500
-    text-white 
-    text-[11px] 
-    font-bold 
-    shadow-md
-  ">
+                    <span className={`ml-auto min-w-5 h-5 px-1 flex items-center justify-center rounded-full ${theme.unread} text-white text-[11px] font-bold shadow-md`}>
                       {conv.unreadCount[user._id] > 99 ? "99+" : conv.unreadCount[user._id]}
                     </span>
                   )}
-
                 </button>
               );
             })}
-
           </div>
         </aside>
 
-        {
-          chatUser && (<main className={`flex-1 max-h-dvh mb-0 flex flex-col ${mobileView && isMobile ? 'hidden' : 'flex'} overflow-hidden transition-all duration-300 relative`}>
-
-            <div className="sticky sm:top-0 top-0 bg-white z-10 flex items-center gap-3 border-b border-gray-200 px-5 py-3 backdrop-blur">
+        {chatUser && (
+          <main className={`flex-1 max-h-dvh mb-0 flex flex-col ${mobileView && isMobile ? 'hidden' : 'flex'} overflow-hidden transition-all duration-300 relative ${theme.mainBg}`}>
+            <div className={`sticky sm:top-0 top-0 z-10 flex items-center gap-3 border-b ${theme.border} px-5 py-3 ${theme.mainBg} backdrop-blur`}>
               <IoIosArrowBack className={`text-2xl ${fullView ? 'rotate-0' : 'rotate-0 sm:rotate-180'} transition-all duration-300 cursor-pointer`} onClick={() => {
                 setFullView(!fullView);
                 if (window.innerWidth < 660) {
@@ -935,52 +898,33 @@ export default function Chat() {
                   setMobileView(true);
                 }
               }} />
+              
               {chatUser && (
                 <div className="flex items-center justify-center">
-                  <Link href={`/components/${chatUser.userId}`} >
+                  <Link href={`/components/${chatUser.userId}`}>
                     <img src={chatUser.image || '/user.jpg'} className="h-10 w-10 rounded-full object-cover" />
                   </Link>
                   <div className="ml-0.5">
                     <p className="font-semibold w-30 truncate">{chatUser.username}</p>
-                    <p className="text-xs text-gray-500">
-                      {onlineUsers.includes(chatUser.userId)
-                        ? (
-                          <span className="flex items-center gap-1 text-green-600">
-                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                            Active now
-                          </span>
-                        )
-                        : (
-                          <span className="text-gray-500">
-                            {lastActive(chatUser.lastActiveAt, chatUser.userId)}
-                          </span>
-                        )}
+                    <p className={`text-xs ${theme.secondaryText}`}>
+                      {onlineUsers.includes(chatUser.userId) ? (
+                        <span className={`flex items-center gap-1 ${theme.online}`}>
+                          <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                          Active now
+                        </span>
+                      ) : (
+                        <span className={theme.offline}>
+                          {lastActive(chatUser.lastActiveAt, chatUser.userId)}
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
               )}
-              {/* 
-              <div className="flex items-center justify-center gap-x-5 self-end ml-auto">
-
-                <button
-                  className="cursor-pointer size-9 bg-red-600 flex items-center justify-center rounded-full text-white"
-                  onClick={callUser}
-                >
-                  <IoCall className="text-2xl" />
-                </button>
-
-                <button
-                  className="cursor-pointer size-9 bg-red-600 flex items-center justify-center rounded-full text-white"
-                  onClick={callUser}
-                >
-                  <IoVideocam className="text-2xl hover:text-green-600" />
-                </button>
-
-              </div> */}
             </div>
 
             <div
-              className="flex-1 overflow-y-auto p-4 pl-2 scrollbar"
+              className="flex-1 overflow-y-auto p-4 pl-2"
               ref={scrollRef}
               onClick={() => {
                 if (window.innerWidth > 660 && ignoreNextClick.current) {
@@ -992,22 +936,18 @@ export default function Chat() {
             >
               {messages?.map((msg, index) => {
                 const isSender = msg.senderId === user._id;
-                const showAvatar =
-                  isSender &&
-                  msg.seen &&
-                  index === messages.length - 1;
+                const showAvatar = isSender && msg.seen && index === messages.length - 1;
+                
                 return (
                   <div key={msg._id} className={`mb-2 relative flex ${isSender ? "justify-end" : "justify-start"}`}>
                     <div className="flex flex-col items-end">
                       <div className="flex items-start justify-start gap-1 relative">
-
                         {isSender && deleteBtn && (msgId.messageId === msg.messageId) && (
-                          <div className="absolute z-10 -left-14 self-center rounded-md sm:bg-white bg-gray-400 text-xl text-white flex flex-col gap-y-2 p-2">
+                          <div className={`absolute z-10 -left-14 self-center rounded-md text-xl text-white flex flex-col gap-y-2 p-2 ${theme.deleteModal} border ${theme.border}`}>
                             <button className="w-8 h-8 flex items-center justify-center bg-red-600 rounded-full" onClick={(e) => {
                               e.stopPropagation();
                               setDeleteMsg(true);
                             }}><MdDeleteForever /></button>
-
                             <button
                               className="w-8 h-8 flex items-center justify-center bg-blue-600 rounded-full"
                               onClick={(e) => {
@@ -1018,15 +958,15 @@ export default function Chat() {
                             >
                               <FaCopy />
                             </button>
-
                           </div>
                         )}
 
                         {!isSender && <img src={chatUser.image || '/user.jpg'} alt="user" className="w-5 h-5 mt-px rounded-full object-center object-cover" />}
 
                         <div
-                          className={`select-none rounded-2xl px-3 py-2 text-sm shadow-sm ${isSender ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-900"
-                            }`}
+                          className={`select-none rounded-2xl px-3 py-2 text-sm shadow-sm ${
+                            isSender ? theme.messageSender : theme.messageReceiver
+                          }`}
                           onMouseDown={(e) => {
                             e.stopPropagation();
                             handlePressStart(msg);
@@ -1036,7 +976,6 @@ export default function Chat() {
                             handlePressEnd();
                           }}
                           onMouseLeave={handlePressEnd}
-
                           onTouchStart={(e) => {
                             e.stopPropagation();
                             handlePressStart(msg);
@@ -1046,7 +985,6 @@ export default function Chat() {
                             handlePressEnd();
                           }}
                         >
-
                           {msg.text && <p className="wrap-break-word max-w-64 sm:max-w-96">{msg.text}</p>}
                           {msg.file_url && (() => {
                             const isVideo = /\.(mp4|webm|mov)$/i.test(msg.file_url);
@@ -1076,6 +1014,7 @@ export default function Chat() {
                           </div>
                         </div>
                       </div>
+                      
                       {showAvatar && (
                         <img
                           src={chatUser.image || '/user.jpg'}
@@ -1083,42 +1022,44 @@ export default function Chat() {
                           className="w-5 h-5 rounded-full object-cover"
                         />
                       )}
+                      
                       {isSender && !msg.seen && (
                         <span className="text-[10px] font-semibold">Unread</span>
                       )}
                     </div>
-
                   </div>
                 );
               })}
+              
               {loadMessages && (
-                <div className="absolute inset-0 flex items-center justify-center z-10 ">
+                <div className="absolute inset-0 flex items-center justify-center z-10">
                   <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
                 </div>
               )}
+              
               {isTyping && (
-                <div className="flex items-center gap-2 text-sm text-gray-500 ml-8 mt-1 animate-pulse">
+                <div className={`flex items-center gap-2 text-sm ${theme.secondaryText} ml-8 mt-1 animate-pulse`}>
                   <span className="flex gap-1">
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></span>
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-300"></span>
+                    <span className={`w-2 h-2 ${theme.loading} rounded-full animate-bounce`}></span>
+                    <span className={`w-2 h-2 ${theme.loading} rounded-full animate-bounce delay-150`}></span>
+                    <span className={`w-2 h-2 ${theme.loading} rounded-full animate-bounce delay-300`}></span>
                   </span>
                 </div>
               )}
 
               {deleteMsg && (
-                <div className="absolute w-72 inset-0 z-50 flex items-center justify-center text-white bg-opacity-50 top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2">
-                  <div className="bg-gray-400 sm:bg-gray-600 p-6 rounded-xl shadow-lg w-80 text-center">
+                <div className="absolute w-72 inset-0 z-50 flex items-center justify-center bg-black/50 top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2">
+                  <div className={`p-6 rounded-xl shadow-lg w-80 text-center ${theme.deleteModal}`}>
                     <h2 className="text-lg font-semibold mb-4">Delete this message?</h2>
                     <div className="flex justify-between gap-4">
                       <button
-                        className="flex-1 py-2 rounded-lg text-black bg-gray-200 hover:bg-gray-300"
+                        className={`flex-1 py-2 rounded-lg ${theme.secondaryText} ${theme.hover}`}
                         onClick={() => setDeleteMsg(false)}
                       >
                         Cancel
                       </button>
                       <button
-                        className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700"
+                        className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white"
                         onClick={() => handleDeleteMessage()}
                       >
                         Confirm
@@ -1127,14 +1068,10 @@ export default function Chat() {
                   </div>
                 </div>
               )}
-
             </div>
 
-            {/* Composer */}
-            <div className="border-t border-gray-200 p-3">
-              <div className="flex flex-col gap-2 rounded-2xl bg-gray-50 p-2 ring-1 ring-gray-200 relative">
-
-                {/* File Preview */}
+            <div className={`border-t ${theme.border} p-3`}>
+              <div className={`flex flex-col gap-2 rounded-2xl p-2 ring-1 ${theme.border}`}>
                 {file && (
                   <div className="relative w-32 h-32">
                     {file.type.startsWith("video/") ? (
@@ -1159,17 +1096,15 @@ export default function Chat() {
                   </div>
                 )}
 
-
                 <div className="flex items-end gap-2">
                   <textarea
                     ref={inputRef}
                     rows={1}
                     value={input}
                     placeholder="Aa..."
-                    className="flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none"
+                    className={`flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none ${theme.text}`}
                     onChange={handleTyping}
                   />
-
 
                   <input
                     type="file"
@@ -1180,13 +1115,14 @@ export default function Chat() {
                   />
 
                   <label htmlFor="fileInput" className="cursor-pointer self-center flex items-center justify-center">
-                    <FaImage className="text-gray-600 text-3xl hover:text-indigo-500" />
+                    <FaImage className={`text-3xl ${theme.secondaryText} hover:text-blue-500`} />
                   </label>
+                  
                   {input || file ? (
                     <button
                       className={`inline-flex h-9 items-center justify-center rounded-xl px-4 text-sm font-semibold text-white
-  ${isUploading ? 'pointer-events-none' : 'pointer-events-auto'}
-  bg-indigo-700`}
+                        ${isUploading ? 'pointer-events-none' : 'pointer-events-auto'}
+                        bg-blue-600 hover:bg-blue-700`}
                       onClick={() => {
                         if (!file) {
                           inputRef.current?.focus({ preventScroll: true });
@@ -1197,24 +1133,20 @@ export default function Chat() {
                     >
                       {isUploading ? "Uploading..." : "Send"}
                     </button>
-
                   ) : (
                     <button
-                      className="text-red-600 inline-flex h-9 text-2xl ml-2 cursor-pointer items-center justify-center"
+                      className="text-red-500 hover:text-red-600 inline-flex h-9 text-2xl ml-2 cursor-pointer items-center justify-center"
                       onClick={() => handleSendMessage("❤️")}
                     >
                       <FaHeart />
                     </button>
                   )}
-
                 </div>
               </div>
             </div>
-
-          </main>)
-        }
-      </div >
-
-    </div >
-  )
+          </main>
+        )}
+      </div>
+    </div>
+  );
 }
