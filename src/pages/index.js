@@ -101,7 +101,6 @@ export default function Chat() {
 
   const theme = darkMode ? themeColors.dark : themeColors.light;
 
-  // Rest of your useEffect and functions remain exactly the same...
   useEffect(() => {
     const t = setInterval(() => {
       forceUpdate(n => n + 1);
@@ -162,7 +161,9 @@ export default function Chat() {
     socketRef.current.emit("join", { userId: user._id });
 
     socketRef.current.on("receiveMessage", (msg) => {
-      const isCurrentChatOpen = chatUser?.conversationId === msg.conversationId;
+      const convId = msg.conversationId;
+
+      const isCurrentChatOpen = chatUser?.conversationId === convId;
 
       if (!isCurrentChatOpen) {
         if (soundRef.current) {
@@ -171,12 +172,15 @@ export default function Chat() {
         }
       }
 
+      const prevCache = messagesCache.current[convId] || [];
+      const alreadyExists = prevCache.some(m => m.messageId === msg.messageId);
+
+      if (!alreadyExists) {
+        messagesCache.current[convId] = [...prevCache, msg];
+      }
+
       if (isCurrentChatOpen) {
-        setMessages(prev => {
-          const updated = [...prev, msg];
-          messagesCache.current[msg.conversationId] = updated;
-          return updated;
-        });
+        setMessages([...messagesCache.current[convId]]);
       }
 
       updateMessage(msg);
@@ -206,6 +210,7 @@ export default function Chat() {
         });
       }
     });
+
 
     socketRef.current.on("seenMessage", ({ conversationId }) => {
       setMessages(prev =>
@@ -738,7 +743,7 @@ export default function Chat() {
         <aside className={`fixed sm:static top-0 left-0 z-20 h-full transform transition-all duration-300 ease-in-out 
           ${mobileView ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0 w-full backdrop-blur 
           ${fullView ? 'sm:w-80' : 'sm:w-0'} ${mobileView ? 'w-full' : 'w-0'} overflow-hidden border-r ${theme.border}`}>
-          
+
           <div className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Chats</h2>
@@ -758,7 +763,7 @@ export default function Chat() {
                 </Link>
               </div>
             </div>
-            
+
             <div className="mt-3 relative">
               <div className="relative w-full flex items-center justify-center gap-x-1">
                 <input
@@ -771,7 +776,7 @@ export default function Chat() {
                 />
                 <FaSearch className={`absolute right-3 ${theme.secondaryText}`} />
               </div>
-              
+
               {isSearch && (
                 <div className="absolute top-10 left-0 w-full h-screen" onClick={() => {
                   if (isSearch) setIsSearch(false);
@@ -825,7 +830,7 @@ export default function Chat() {
               )}
             </div>
           </div>
-          
+
           <div className="h-[calc(100%-92px)] overflow-y-auto">
             {history.map(conv => {
               const lastMsgDate = conv.lastMessageAt ? new Date(conv.lastMessageAt) : new Date();
@@ -898,7 +903,7 @@ export default function Chat() {
                   setMobileView(true);
                 }
               }} />
-              
+
               {chatUser && (
                 <div className="flex items-center justify-center">
                   <Link href={`/components/${chatUser.userId}`}>
@@ -937,7 +942,7 @@ export default function Chat() {
               {messages?.map((msg, index) => {
                 const isSender = msg.senderId === user._id;
                 const showAvatar = isSender && msg.seen && index === messages.length - 1;
-                
+
                 return (
                   <div key={msg._id} className={`mb-2 relative flex ${isSender ? "justify-end" : "justify-start"}`}>
                     <div className="flex flex-col items-end">
@@ -964,9 +969,8 @@ export default function Chat() {
                         {!isSender && <img src={chatUser.image || '/user.jpg'} alt="user" className="w-5 h-5 mt-px rounded-full object-center object-cover" />}
 
                         <div
-                          className={`select-none rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                            isSender ? theme.messageSender : theme.messageReceiver
-                          }`}
+                          className={`select-none rounded-2xl px-3 py-2 text-sm shadow-sm ${isSender ? theme.messageSender : theme.messageReceiver
+                            }`}
                           onMouseDown={(e) => {
                             e.stopPropagation();
                             handlePressStart(msg);
@@ -1014,7 +1018,7 @@ export default function Chat() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {showAvatar && (
                         <img
                           src={chatUser.image || '/user.jpg'}
@@ -1022,7 +1026,7 @@ export default function Chat() {
                           className="w-5 h-5 rounded-full object-cover"
                         />
                       )}
-                      
+
                       {isSender && !msg.seen && (
                         <span className="text-[10px] font-semibold">Unread</span>
                       )}
@@ -1030,13 +1034,13 @@ export default function Chat() {
                   </div>
                 );
               })}
-              
+
               {loadMessages && (
                 <div className="absolute inset-0 flex items-center justify-center z-10">
                   <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
                 </div>
               )}
-              
+
               {isTyping && (
                 <div className={`flex items-center gap-2 text-sm ${theme.secondaryText} ml-8 mt-1 animate-pulse`}>
                   <span className="flex gap-1">
@@ -1117,7 +1121,7 @@ export default function Chat() {
                   <label htmlFor="fileInput" className="cursor-pointer self-center flex items-center justify-center">
                     <FaImage className={`text-3xl ${theme.secondaryText} hover:text-blue-500`} />
                   </label>
-                  
+
                   {input || file ? (
                     <button
                       className={`inline-flex h-9 items-center justify-center rounded-xl px-4 text-sm font-semibold text-white
