@@ -213,14 +213,23 @@ export default function Chat() {
 
 
     socketRef.current.on("seenMessage", ({ conversationId }) => {
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.conversationId === conversationId && msg.senderId === user._id
+      const convId = conversationId;
+
+      // ✅ Update messages state
+      setMessages(prev => {
+        const updated = prev.map(msg =>
+          msg.conversationId === convId && msg.senderId === user._id
             ? { ...msg, seen: true }
             : msg
-        )
-      );
+        );
+
+        // ✅ IMPORTANT: Update cache also
+        messagesCache.current[convId] = updated;
+
+        return updated;
+      });
     });
+
 
     socketRef.current.on("messageDeleted", ({ messageId }) => {
       setMessages(prev => prev.filter(m => m.messageId !== messageId));
